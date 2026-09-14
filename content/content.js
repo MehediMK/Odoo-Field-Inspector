@@ -1,5 +1,5 @@
 /**
- * Field Inspector - main content script controller
+ * Odoo Field Inspector - main content script controller
  *
  * Wires together utils.js / detector.js / ui.js, owns the enabled/settings
  * state for this page, and talks to the popup/background via

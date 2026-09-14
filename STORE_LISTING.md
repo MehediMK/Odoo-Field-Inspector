@@ -9,7 +9,7 @@ box when you submit.
 
 **Extension name** (verify availability — CWS names must be unique):
 ```
-Field Inspector
+Odoo Field Inspector
 ```
 
 **Summary** (132 char max, shown under the name in search results):
@@ -24,7 +24,7 @@ Click any form field or table column to inspect its HTML, CSS selector, XPath, a
 
 **Description** (main listing body):
 ```
-Field Inspector turns any web page into a live HTML reference. Click a
+Odoo Field Inspector turns any web page into a live HTML reference. Click a
 form field's label or a table's column header and a developer-tool style
 panel slides in with everything about it: element type, id/name, classes,
 current and default value, required/read-only/disabled state, validation
@@ -82,7 +82,7 @@ reachable indefinitely.
 
 **Single purpose description** (CWS requires this in plain language):
 ```
-Field Inspector's single purpose is to let a developer click a form
+Odoo Field Inspector's single purpose is to let a developer click a form
 field or table column on any web page and see its HTML structure,
 attributes, CSS selector, and XPath in an on-page panel. On Odoo pages
 it additionally fetches that field's real definition from the same Odoo
@@ -133,8 +133,8 @@ are dev-only and intentionally excluded from the package.
 
 1. One-time $5 Chrome Web Store developer registration fee (if you
    haven't already registered a developer account).
-2. Confirm the "Field Inspector" name isn't already taken — if it is,
-   pick a variant (e.g. "Field Inspector for Odoo") and update
+2. Confirm the "Odoo Field Inspector" name isn't already taken — if it is,
+   pick a variant (e.g. "Odoo Field Inspector for Odoo") and update
    `manifest.json`'s `name` to match before rebuilding the zip.
 3. Load-unpacked test the exact zipped contents one more time (not just
    your working directory) to make sure nothing needed got excluded.
