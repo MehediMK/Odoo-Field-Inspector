@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Field Inspector</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="fp-header">
+    <div class="fp-title">
+      <span class="fp-logo" aria-hidden="true">🔍</span>
+      <span>Field Inspector</span>
+    </div>
+    <span class="fp-version" id="fp-version"></span>
+  </header>
+
+  <main class="fp-main">
+    <section class="fp-card fp-primary">
+      <div class="fp-row fp-row-toggle">
+        <div>
+          <div class="fp-row-title">Enable Inspector</div>
+          <div class="fp-row-sub" id="fp-status-text">Checking current tab…</div>
+        </div>
+        <label class="fp-switch">
+          <input type="checkbox" id="fp-enable-toggle" />
+          <span class="fp-slider"></span>
+        </label>
+      </div>
+      <p class="fp-hint">Click a field label or a table column header on the page to inspect it. Click the panel's × or press Esc to close it.</p>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">Detection Modes</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-form-view" />
+        <span>Form View <em>(labels, inputs, selects, textareas, custom controls)</em></span>
+      </label>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-list-view" />
+        <span>List View <em>(table &amp; grid columns)</em></span>
+      </label>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">Appearance</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-highlight" />
+        <span>Highlight detected fields on the page</span>
+      </label>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">Copy Behavior</div>
+      <label class="fp-radio-row">
+        <input type="radio" name="fp-copy-format" value="text" id="fp-copy-text" />
+        <span>Plain text (readable, line-by-line)</span>
+      </label>
+      <label class="fp-radio-row">
+        <input type="radio" name="fp-copy-format" value="json" id="fp-copy-json" />
+        <span>JSON (structured, for dev tools)</span>
+      </label>
+    </section>
+
+    <details class="fp-card fp-about">
+      <summary>About &amp; Privacy</summary>
+      <div class="fp-about-body">
+        <p>Field Inspector reads only the HTML of the page you're currently viewing, entirely inside your browser. It never sends page content, field values, or browsing activity to any server, and it never modifies form data — clicking a field only opens a read-only info panel.</p>
+        <p><strong>Permissions used:</strong></p>
+        <ul>
+          <li><code>activeTab</code> / <code>scripting</code> — inject the inspector only into the tab you explicitly enable it on.</li>
+          <li><code>storage</code> — remember your preferences (this popup's settings) locally in your browser.</li>
+        </ul>
+        <p>No host permissions are requested, so the extension cannot run in the background on sites you haven't activated it on.</p>
+      </div>
+    </details>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

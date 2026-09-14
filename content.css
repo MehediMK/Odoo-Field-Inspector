@@ -1,0 +1,21 @@
+/**
+ * Field Inspector - page-level highlight styles.
+ *
+ * Scoped strictly under html[data-fi-active] (set only while the inspector
+ * is enabled) and using outline/box-shadow instead of border/margin/padding
+ * so nothing here ever shifts the host page's layout or collides with its
+ * own CSS. Uses very specific, namespaced class names to avoid collisions.
+ */
+
+html[data-fi-active] .fi-detected-field {
+  outline: 1.5px dashed rgba(37, 99, 235, 0.55) !important;
+  outline-offset: 2px !important;
+  cursor: pointer !important;
+}
+
+html[data-fi-active] .fi-hover-field {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px !important;
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  cursor: pointer !important;
+}
