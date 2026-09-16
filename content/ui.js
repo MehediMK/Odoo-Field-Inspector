@@ -424,8 +424,97 @@
     }
     .fi-copy-all-btn:hover { background: var(--fi-copy-all-hover-bg); }
     .fi-copy-all-btn.fi-copied { background: var(--fi-copy-all-copied-bg); }
+    .fi-finder-btn {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      appearance: none;
+      border: none;
+      background: var(--fi-copy-all-bg);
+      color: var(--fi-copy-all-fg);
+      box-shadow: var(--fi-shadow);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2147483647;
+    }
+    .fi-finder-btn[hidden] { display: none; }
+    .fi-finder-btn svg { width: 20px; height: 20px; }
+    .fi-finder-btn:hover { background: var(--fi-copy-all-hover-bg); }
+    .fi-finder-panel {
+      position: fixed;
+      left: 16px;
+      bottom: 68px;
+      width: 340px;
+      max-width: calc(100vw - 32px);
+      max-height: min(60vh, 480px);
+      display: flex;
+      flex-direction: column;
+      background: var(--fi-bg);
+      color: var(--fi-fg);
+      border-radius: 10px;
+      box-shadow: var(--fi-shadow);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      z-index: 2147483647;
+      overflow: hidden;
+      animation: fi-slide-in 140ms ease-out;
+    }
+    .fi-finder-panel[hidden] { display: none; }
+    .fi-finder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--fi-header-bg);
+      color: var(--fi-header-fg);
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+    .fi-finder-search-wrap { padding: 10px 12px; flex: 0 0 auto; border-bottom: 1px solid var(--fi-section-border); }
+    .fi-finder-search {
+      width: 100%;
+      appearance: none;
+      border: 1px solid var(--fi-copy-btn-border);
+      background: var(--fi-copyable-bg);
+      color: var(--fi-fg);
+      border-radius: 7px;
+      padding: 7px 9px;
+      font-size: 13px;
+      outline: none;
+    }
+    .fi-finder-search:focus { border-color: var(--fi-tab-active); }
+    .fi-finder-count { padding: 6px 12px 0; font-size: 11px; color: var(--fi-hint-fg); flex: 0 0 auto; }
+    .fi-finder-results { overflow-y: auto; flex: 1 1 auto; padding: 6px; }
+    .fi-finder-result {
+      display: block;
+      width: 100%;
+      text-align: left;
+      appearance: none;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      padding: 7px 8px;
+      cursor: pointer;
+      color: inherit;
+      font: inherit;
+    }
+    .fi-finder-result:hover { background: var(--fi-copy-btn-hover-bg); }
+    .fi-finder-result-top { display: flex; align-items: center; gap: 6px; }
+    .fi-finder-result-label { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fi-finder-result-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      color: var(--fi-row-label-fg);
+      margin-top: 2px;
+    }
     @media (max-width: 460px) {
       .fi-panel { left: 12px; right: 12px; top: 12px; bottom: 12px; width: auto; }
+      .fi-finder-panel { left: 12px; right: 12px; width: auto; }
     }
   `;
 
@@ -440,6 +529,11 @@
     activeTab: 0,
     history: [], // { label, info, el } — most recent last
     historyPos: -1, // index into history currently on screen
+    finderBtnEl: null,
+    finderPanelEl: null,
+    finderFields: [], // last-fetched full { kind, technicalName, label, el } list
+    onFinderOpen: null, // () => fields[] — set by content.js
+    onFinderSelect: null, // (entry) => void — set by content.js
   };
 
   function escapeHtml(str) {
@@ -468,6 +562,7 @@
     cell: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M8 1.5v13M1.5 8h13"/></svg>`,
     table: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M1.5 6.3h13M1.5 10h13M6.2 2.5v11M10.8 2.5v11"/></svg>`,
     sample: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="4.5" width="13" height="7" rx="1.5"/><path d="M5 6.5v3" stroke-linecap="round"/></svg>`,
+    search: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>`,
   };
 
   /** Best-effort color category for a type-ish string (ORM ttype, HTML input type, generic field type) — purely cosmetic. */
@@ -623,12 +718,47 @@
     `;
     shadow.appendChild(panel);
 
+    const finderBtn = document.createElement("button");
+    finderBtn.type = "button";
+    finderBtn.className = "fi-finder-btn";
+    finderBtn.title = "Search fields (label or technical name)";
+    finderBtn.hidden = true;
+    finderBtn.innerHTML = ICONS.search;
+    shadow.appendChild(finderBtn);
+
+    const finderPanel = document.createElement("div");
+    finderPanel.className = "fi-finder-panel";
+    finderPanel.hidden = true;
+    finderPanel.innerHTML = `
+      <div class="fi-finder-header">
+        <span>Field Finder</span>
+        <button type="button" class="fi-close-btn" id="fi-finder-close-btn" title="Close" aria-label="Close">×</button>
+      </div>
+      <div class="fi-finder-search-wrap">
+        <input type="text" class="fi-finder-search" id="fi-finder-search" placeholder="Search by label or technical name…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="fi-finder-count" id="fi-finder-count"></div>
+      <div class="fi-finder-results" id="fi-finder-results"></div>
+    `;
+    shadow.appendChild(finderPanel);
+
     panel.querySelector("#fi-close-btn").addEventListener("click", () => ui.closePanel());
     panel.querySelector("#fi-copy-all-btn").addEventListener("click", (e) => ui.copyAll(e.currentTarget));
     panel.querySelector("#fi-jump-btn").addEventListener("click", () => ui.jumpToElement());
     makeDraggable(panel, panel.querySelector(".fi-header"));
 
+    finderBtn.addEventListener("click", () => (ui.isFinderOpen() ? ui.closeFinder() : ui.openFinder()));
+    finderPanel.querySelector("#fi-finder-close-btn").addEventListener("click", () => ui.closeFinder());
+    finderPanel.querySelector("#fi-finder-search").addEventListener("input", (e) => renderFinderResults(e.target.value));
+
     shadow.addEventListener("click", (e) => {
+      const finderResult = e.target.closest(".fi-finder-result");
+      if (finderResult) {
+        const idx = Number(finderResult.getAttribute("data-idx"));
+        const entry = ui.finderFields[idx];
+        if (entry && typeof ui.onFinderSelect === "function") ui.onFinderSelect(entry);
+        return;
+      }
       const tabCopyBtn = e.target.closest(".fi-tab-copy-btn");
       if (tabCopyBtn) {
         const body = tabCopyBtn.closest(".fi-tab-content").querySelector(".fi-tab-body");
@@ -662,6 +792,83 @@
     ui.shadowRoot = shadow;
     ui.panelEl = panel;
     ui.bodyEl = panel.querySelector("#fi-body");
+    ui.finderBtnEl = finderBtn;
+    ui.finderPanelEl = finderPanel;
+  };
+
+  function finderKindLabel(kind) {
+    return kind === "list" ? "Column" : "Form";
+  }
+
+  /** Filters ui.finderFields by the query (matches label OR technical name, case-insensitive) and renders the result list. */
+  function renderFinderResults(query) {
+    const resultsEl = ui.finderPanelEl && ui.finderPanelEl.querySelector("#fi-finder-results");
+    const countEl = ui.finderPanelEl && ui.finderPanelEl.querySelector("#fi-finder-count");
+    if (!resultsEl) return;
+    const q = String(query || "")
+      .trim()
+      .toLowerCase();
+    const matches = ui.finderFields.filter((f, i) => {
+      f.__idx = i; // stable index into ui.finderFields for the click handler
+      if (!q) return true;
+      return (f.label && f.label.toLowerCase().includes(q)) || (f.technicalName && f.technicalName.toLowerCase().includes(q));
+    });
+
+    if (countEl) {
+      countEl.textContent = ui.finderFields.length
+        ? `${matches.length} of ${ui.finderFields.length} field${ui.finderFields.length === 1 ? "" : "s"}`
+        : "No fields detected on this page yet.";
+    }
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<div class="fi-empty-hint" style="padding:10px 6px;">${
+        ui.finderFields.length ? "No matches." : "Nothing to search — enable Form View/List View and click into a form or list first."
+      }</div>`;
+      return;
+    }
+
+    resultsEl.innerHTML = matches
+      .slice(0, 200)
+      .map(
+        (f) =>
+          `<button type="button" class="fi-finder-result" data-idx="${f.__idx}"><div class="fi-finder-result-top"><span class="fi-pill${
+            f.kind === "list" ? " purple" : " blue"
+          }" style="font-size:10px;">${escapeHtml(finderKindLabel(f.kind))}</span><span class="fi-finder-result-label">${escapeHtml(
+            f.label || "(no label)"
+          )}</span></div>${
+            f.technicalName ? `<div class="fi-finder-result-name">${escapeHtml(f.technicalName)}</div>` : ""
+          }</button>`
+      )
+      .join("");
+  }
+
+  ui.showFinderButton = function () {
+    ui.ensureHost();
+    if (ui.finderBtnEl) ui.finderBtnEl.hidden = false;
+  };
+
+  ui.hideFinderButton = function () {
+    if (ui.finderBtnEl) ui.finderBtnEl.hidden = true;
+  };
+
+  ui.isFinderOpen = function () {
+    return !!(ui.finderPanelEl && !ui.finderPanelEl.hidden);
+  };
+
+  ui.openFinder = function () {
+    ui.ensureHost();
+    ui.finderFields = typeof ui.onFinderOpen === "function" ? ui.onFinderOpen() || [] : [];
+    ui.finderPanelEl.hidden = false;
+    const input = ui.finderPanelEl.querySelector("#fi-finder-search");
+    renderFinderResults(input ? input.value : "");
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  };
+
+  ui.closeFinder = function () {
+    if (ui.finderPanelEl) ui.finderPanelEl.hidden = true;
   };
 
   ui.jumpToElement = function () {
@@ -1170,6 +1377,9 @@
     ui.lastElement = null;
     ui.history = [];
     ui.historyPos = -1;
+    ui.finderBtnEl = null;
+    ui.finderPanelEl = null;
+    ui.finderFields = [];
   };
 
   /** Plain-text rendering of the live Odoo section, shared by the Form Field and List Cell copy-all text. */

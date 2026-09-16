@@ -35,6 +35,12 @@
 
   let lastHoverEl = null;
 
+  // Wired once: the Field Finder (in ui.js) doesn't know about detector/odoo
+  // itself, it just asks for a fresh field list on open and reports back
+  // which entry the user picked.
+  ui.onFinderOpen = () => detector.listAllFields(state.settings);
+  ui.onFinderSelect = (entry) => inspectElement({ kind: entry.kind, el: entry.el });
+
   function inPanel(e) {
     const path = typeof e.composedPath === "function" ? e.composedPath() : [];
     return !!(ui.hostEl && path.includes(ui.hostEl));
@@ -56,6 +62,44 @@
     }
   }
 
+  /**
+   * Builds the info panel for a resolved element and shows it, including the
+   * live Odoo lookups. Shared by the real click handler and the Field
+   * Finder's "select a result" action, so both paths behave identically.
+   */
+  function inspectElement(resolved) {
+    let info;
+    if (resolved.kind === "list") {
+      info = detector.buildColumnInfo(resolved.el);
+    } else if (resolved.kind === "listCell") {
+      info = detector.buildDataCellInfo(resolved.el);
+    } else {
+      info = detector.buildFormFieldInfo(resolved.el);
+    }
+
+    const odoo = window.__FI__.odoo;
+    const canLookUpOdoo = state.settings.odooMode && info.odooFieldName && odoo && (info.kind === "form" || info.kind === "listCell");
+    if (canLookUpOdoo) {
+      info.odooModel = odoo.detectCurrentModel();
+    }
+
+    ui.showPanel(info, state.settings, resolved.el);
+
+    // Live Odoo field definition lookup: runs after the panel is already
+    // showing (synchronous DOM-derived info first, network second) and is
+    // race-guarded against the user clicking a different field before the
+    // RPC resolves — see ui.beginOdooLookup/applyOdooFieldMeta.
+    if (canLookUpOdoo && info.odooModel) {
+      const requestId = ui.beginOdooLookup();
+      odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
+        ui.applyOdooFieldMeta(requestId, meta);
+      });
+      odoo.fetchViewFieldAttrs(info.odooModel, info.odooFieldName).then((viewAttrs) => {
+        ui.applyOdooViewAttrs(requestId, viewAttrs);
+      });
+    }
+  }
+
   function onClick(e) {
     try {
       if (!state.enabled) return;
@@ -70,36 +114,7 @@
       e.preventDefault();
       e.stopPropagation();
 
-      let info;
-      if (resolved.kind === "list") {
-        info = detector.buildColumnInfo(resolved.el);
-      } else if (resolved.kind === "listCell") {
-        info = detector.buildDataCellInfo(resolved.el);
-      } else {
-        info = detector.buildFormFieldInfo(resolved.el);
-      }
-
-      const odoo = window.__FI__.odoo;
-      const canLookUpOdoo = state.settings.odooMode && info.odooFieldName && odoo && (info.kind === "form" || info.kind === "listCell");
-      if (canLookUpOdoo) {
-        info.odooModel = odoo.detectCurrentModel();
-      }
-
-      ui.showPanel(info, state.settings, resolved.el);
-
-      // Live Odoo field definition lookup: runs after the panel is already
-      // showing (synchronous DOM-derived info first, network second) and is
-      // race-guarded against the user clicking a different field before the
-      // RPC resolves — see ui.beginOdooLookup/applyOdooFieldMeta.
-      if (canLookUpOdoo && info.odooModel) {
-        const requestId = ui.beginOdooLookup();
-        odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
-          ui.applyOdooFieldMeta(requestId, meta);
-        });
-        odoo.fetchViewFieldAttrs(info.odooModel, info.odooFieldName).then((viewAttrs) => {
-          ui.applyOdooViewAttrs(requestId, viewAttrs);
-        });
-      }
+      inspectElement(resolved);
     } catch (err) {
       console.error("[Field Inspector] onClick error:", err);
     }
@@ -130,7 +145,10 @@
   }
 
   function onKeyDown(e) {
-    if (e.key === "Escape" && ui.isPanelOpen()) {
+    if (e.key !== "Escape") return;
+    if (ui.isFinderOpen && ui.isFinderOpen()) {
+      ui.closeFinder();
+    } else if (ui.isPanelOpen()) {
       ui.closePanel();
     }
   }
@@ -166,6 +184,8 @@
     attachListeners();
     detector.applyHighlights(state.settings);
     detector.startObserving(state.settings);
+    ui.ensureHost();
+    ui.showFinderButton();
     notifyBackground(true);
   }
 
@@ -176,6 +196,8 @@
     detector.stopObserving();
     detector.clearHighlights();
     ui.closePanel();
+    ui.closeFinder();
+    ui.hideFinderButton();
     if (lastHoverEl) {
       detector.setHover(lastHoverEl, false);
       lastHoverEl = null;

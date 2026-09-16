@@ -501,6 +501,55 @@
   };
 
   // ---------------------------------------------------------------------
+  // Field Finder: a flat, searchable index of every field/column on the
+  // current page — technical name + label — for the search/filter panel.
+  // Independent of resolveInspectable (which classifies a single click
+  // target); this instead enumerates everything at once.
+  // ---------------------------------------------------------------------
+
+  detector.listAllFields = function (settings) {
+    const results = [];
+    const seen = new Set();
+    try {
+      if (settings.formView) {
+        document.querySelectorAll(ODOO_FIELD_WIDGET_SELECTOR).forEach((widget) => {
+          if (seen.has(widget) || !utils.isVisible(widget)) return;
+          const technicalName = widget.getAttribute("name") || "";
+          if (!technicalName) return;
+          seen.add(widget);
+          const labelEl = findOdooRowSibling(widget, LABEL_SELECTOR);
+          const label = (labelEl && labelEl.textContent.trim()) || technicalName;
+          results.push({ kind: "form", technicalName, label, el: widget });
+        });
+
+        // Plain (non-Odoo) form controls with a name/id but no .o_field_widget wrapper.
+        document.querySelectorAll(FORM_CONTROL_SELECTOR).forEach((ctrl) => {
+          if (seen.has(ctrl) || !utils.isVisible(ctrl) || ctrl.closest(ODOO_FIELD_WIDGET_SELECTOR)) return;
+          const technicalName = ctrl.getAttribute("name") || ctrl.id || "";
+          if (!technicalName) return;
+          seen.add(ctrl);
+          const found = findLabelForControl(ctrl);
+          results.push({ kind: "form", technicalName, label: found.text || technicalName, el: ctrl });
+        });
+      }
+
+      if (settings.listView) {
+        document.querySelectorAll(LIST_HEADER_SELECTOR).forEach((th) => {
+          if (seen.has(th) || !utils.isVisible(th)) return;
+          const technicalName = th.getAttribute("data-name") || th.getAttribute("name") || th.getAttribute("data-field") || "";
+          const label = th.textContent.trim() || th.getAttribute("aria-label") || th.getAttribute("title") || "";
+          if (!technicalName && !label) return;
+          seen.add(th);
+          results.push({ kind: "list", technicalName, label, el: th });
+        });
+      }
+    } catch (err) {
+      console.error("[Field Inspector] listAllFields failed:", err);
+    }
+    return results;
+  };
+
+  // ---------------------------------------------------------------------
   // Persistent highlighting (kept fresh via MutationObserver)
   // ---------------------------------------------------------------------
 
