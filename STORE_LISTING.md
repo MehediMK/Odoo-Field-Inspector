@@ -53,6 +53,13 @@ No more guessing a field's technical name from CSS classes. This has its
 own on/off toggle in the popup, separate from the general inspector
 switch, and follows your system's light/dark theme.
 
+FIELD FINDER
+A floating search button opens a page-wide search: filter every field
+and list column on the page by label or technical name, live as you
+type, then click a result to jump straight to its full inspector panel.
+If an Odoo wizard (dialog) is open, the search automatically scopes to
+just that wizard's fields.
+
 NEVER TOUCHES YOUR DATA
 While inspecting, clicks on fields are intercepted before the page sees
 them — labels never toggle checkboxes, <select> never opens, and no
@@ -77,13 +84,21 @@ only run on a tab after you explicitly enable the inspector for it.
 
 **Privacy policy URL:**
 ```
-https://claude.ai/code/artifact/0e2a1716-6fc9-48a5-bb64-c0632073351a
+<PUBLISH PRIVACY_POLICY.md AND PASTE ITS URL HERE>
 ```
-This is a Claude Artifact page generated for this submission. If you'd
-rather host it yourself (e.g. on GitHub Pages, so it isn't tied to a
-Claude account), copy its content into your own repo/site and use that
-URL instead — either is fine for CWS review as long as the URL stays
-reachable indefinitely.
+The full policy now lives in this repo as [`PRIVACY_POLICY.md`](../PRIVACY_POLICY.md)
+— CWS requires a stable, publicly reachable URL, not a repo file path, so
+publish it before submitting. Two easy options:
+- **GitHub Pages**: enable Pages for this repo (Settings → Pages), then
+  use `https://<you>.github.io/<repo>/PRIVACY_POLICY.md` (or render it
+  through a Jekyll/plain-HTML page if you want it styled).
+- **Raw GitHub URL**: `https://raw.githubusercontent.com/<you>/<repo>/main/PRIVACY_POLICY.md`
+  works too — plain text, but always reachable as long as the repo is
+  public.
+
+If you ever change what data the extension sends (e.g. adding a new
+Odoo RPC lookup), update `PRIVACY_POLICY.md` first — the "Changes to
+this policy" section commits to that.
 
 **Single purpose description** (CWS requires this in plain language):
 ```
@@ -141,12 +156,14 @@ since only you can log into it.
 
 ## Package
 
-Upload `field-inspector-v1.2.0.zip` (rebuilt after the Odoo Developer Mode
-toggle, view-declared field attributes, list-cell inspection, the field
-record link, and dark theme were added). It contains only the files
-`manifest.json` references: `manifest.json`, `background.js`, `content/`,
-`content.css`, `popup/`, `icons/`. `README.md` and this file are dev-only
-and intentionally excluded from the package.
+Upload `field-inspector-v1.3.0.zip` (rebuilt after the tabbed panel,
+colored type chips, table-styled rows, draggable panel, inspection
+history, jump-to-element, per-tab copy, and the Field Finder — including
+wizard-scoped search — were added, plus the new icon set). It contains
+only the files `manifest.json` references: `manifest.json`,
+`background.js`, `content/`, `content.css`, `popup/`, `icons/*.png`.
+`README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `icons/icon.svg`,
+and `promo/` are dev-only and intentionally excluded from the package.
 
 ## Before you submit
 
@@ -160,6 +177,10 @@ and intentionally excluded from the package.
 4. The three `promo/` screenshots are current as of the tabbed-panel,
    colored type chips, and Field Finder UI. Regenerate them (or add
    real-Odoo ones) if the panel's look changes again before submitting.
-5. Submissions that request no host permissions and have a clear single
+5. Publish `PRIVACY_POLICY.md` somewhere publicly reachable (see
+   **Privacy practices tab** above) and paste that URL into both the
+   dashboard's privacy policy field and the description's placeholder —
+   the submission will be rejected without a working privacy policy URL.
+6. Submissions that request no host permissions and have a clear single
    purpose (this one) typically review faster, but first-time developer
    accounts can still take several business days.

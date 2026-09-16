@@ -39,7 +39,7 @@ show the field's real, authoritative definition.
   behavior.
 - **Shadow DOM UI** — the inspector panel renders inside an isolated
   Shadow DOM tree, so host-page CSS can't distort it and the panel's CSS
-  can never leak onto the page. It follows your system's light/dark theme.
+  can never leak onto the page.
 - **List view data cells** — click a plain table cell, not just its column
   header, to see its row/column position, text, and (on Odoo pages) the
   same live field lookup as a form field.
@@ -52,6 +52,28 @@ show the field's real, authoritative definition.
   decoded selection options, a direct link to the field's own admin
   record, and a ready-to-paste `<field name="..."/>` view XML snippet.
   See [Odoo Developer Mode](#odoo-developer-mode) below.
+- **Tabbed panel, Odoo-notebook style** — each info category (Odoo Field,
+  Field Info, State, Selectors, Structure, Validation/Data/ARIA/Other
+  Attributes, …) is its own tab, styled after Odoo's own form-view
+  notebook (flat underlined tabs, horizontally scrollable), instead of
+  one long scrolling page.
+- **Color-coded type chips** — ORM type, HTML field type, and input type
+  values render as color-coded pills (relational = purple, boolean =
+  green, numeric = orange, date/time = teal, selection = pink,
+  text-like = blue) so a field's shape is recognizable at a glance.
+- **Field Finder** — a floating search button opens a panel that indexes
+  every field/column on the page (label + technical name) and filters
+  live as you type; click a result to jump straight to its full
+  inspector panel. If an Odoo wizard (dialog) is open, the search is
+  automatically scoped to just that wizard's fields. See
+  [Field Finder](#field-finder) below.
+- **Inspection history, jump-to-element, per-tab copy** — a breadcrumb
+  strip lets you reopen any of your last few inspected fields; a header
+  button scrolls the real page element into view and flashes it; each
+  tab has its own "Copy Tab" button alongside the existing Copy All.
+- **Draggable, theme-aware panel** — drag the panel by its header to
+  reposition it anywhere on screen; it follows your system's light/dark
+  theme automatically.
 
 ## Project Structure
 
@@ -72,8 +94,16 @@ chrome-field-inspector/
 │   └── popup.css
 ├── icons/
 │   ├── icon16.png / icon32.png / icon48.png / icon128.png
-└── README.md
+│   └── icon.svg            # Vector source for the icons above (dev-only)
+├── README.md
+├── PRIVACY_POLICY.md       # Full privacy policy (dev-only, see below)
+└── STORE_LISTING.md        # Chrome Web Store submission copy (dev-only)
 ```
+
+`README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `icons/icon.svg`,
+and `promo/` (screenshot sources) are documentation/dev assets — none of
+them are referenced by `manifest.json`, so none of them are included in
+the packaged `.zip` uploaded to the Chrome Web Store.
 
 ## Architecture
 
@@ -251,6 +281,37 @@ Odoo-specific lookup below is skipped entirely, with no network activity.
   [Security & Privacy](#security--privacy) — and it's the one covered by
   its own popup toggle, off switches this whole section off.
 
+## Field Finder
+
+A floating search button (bottom-right, while the inspector is enabled)
+opens a page-wide search panel for every field/column the extension can
+see — useful for a form with more fields than you can scan by eye, or
+for finding a field by its technical name without knowing where it is
+on the page.
+
+- **Indexing** (`detector.listAllFields`): scans for every
+  `.o_field_widget[name]` (Odoo form fields), `<th data-name="...">`
+  (Odoo list columns), and, as a fallback for non-Odoo pages, any plain
+  form control with a `name`/`id`. Each entry records its label and
+  technical name; invisible elements (`utils.isVisible`) are skipped.
+- **Live filtering**: matches the query as a case-insensitive substring
+  of *either* the label or the technical name — search "email" or
+  search `email` (the field name) and both find the same field.
+- **Wizard-scoped search** (`detector.findOpenWizard`): if an Odoo
+  dialog/wizard is currently open (`.o_dialog:not(.o_inactive_modal)` or
+  a plain `.modal.show`, whichever the page uses), opening the finder
+  automatically scopes the index to just that wizard's fields instead of
+  the whole page — shown via a badge with the wizard's own title, and a
+  matching search placeholder. Closing the wizard and reopening the
+  finder falls back to the whole page automatically.
+- **Selecting a result** re-uses the exact same code path as clicking
+  the field directly on the page (`inspectElement` in `content.js`) —
+  same info panel, same live Odoo lookups — so the finder is a shortcut
+  to a field, not a separate/lesser inspection mode. The finder itself
+  stays open afterwards so you can keep searching.
+- **Esc** closes the finder first if it's open, then the inspector panel
+  on a second press, so they don't fight over the same key.
+
 ## Installation
 
 1. Download or clone this folder (`chrome-field-inspector/`).
@@ -282,6 +343,10 @@ across sessions via `chrome.storage.local` and apply live if you change
 them while the inspector is already enabled on a tab.
 
 ## Security & Privacy
+
+See [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) for the full policy (what's
+collected — nothing, by default — and exactly what the Odoo Developer
+Mode exception sends and to whom). Summary:
 
 - All field/column analysis happens **entirely client-side**, inside the
   content script running in your tab. Nothing about the page — its HTML,
@@ -414,20 +479,47 @@ After loading the extension via **Load unpacked**:
     - Expected: "Enable Inspector" is disabled with the message "Not
       available on this page."
 
+13. **Field Finder**
+    - With the inspector enabled, click the floating search button
+      (bottom-right).
+    - Type part of a field's label, then clear it and type part of a
+      technical name instead.
+    - Expected: results filter live either way; clicking a result opens
+      that field's full inspector panel (same as clicking it directly).
+
+14. **Tabs, chips, and panel controls**
+    - Open the panel on an Odoo field with a relational (many2one) type.
+    - Expected: an "Odoo Field" tab with a purple `many2one` type chip;
+      switching tabs swaps content without closing the panel; the header
+      button scrolls to and flashes the real element; dragging the
+      header repositions the panel.
+
 ## Extending
 
 - **New field pattern**: add a selector to `FORM_CONTROL_SELECTOR` (or a
   new branch in `describeFieldType`) in `content/detector.js`.
 - **New info field**: add it to the object returned by
-  `buildFormFieldInfo`/`buildColumnInfo` in `content/detector.js`, then
-  render it via the `row(...)`/`section(...)` helpers in
-  `content/ui.js`'s `renderFormInfo`/`renderListInfo`.
+  `buildFormFieldInfo`/`buildColumnInfo`/`buildDataCellInfo` in
+  `content/detector.js`, then render it via the `row(...)` helper inside
+  the relevant tab in `content/ui.js`'s `renderFormInfo`/`renderListInfo`/
+  `renderDataCellInfo` — each of those returns an array of `{ title,
+  icon, html }` tab objects; `row(...)` output gets wrapped in `table(...)`
+  for the bordered/striped look, and `kvTable(...)`/`attrList(...)` do the
+  same for key/value lists (attributes, selection options). Add a new tab
+  by pushing another entry onto that array; `renderBody`/`renderPanelBody`
+  and `renderTabsBar` handle rendering whichever tab is active without
+  further changes.
 - **New popup setting**: add the control to `popup/popup.html`, read/write
   it in `popup/popup.js`'s `applySettingsToUI`/`onSettingChange`, and
   consume it from `state.settings` in `content/content.js` /
   `content/detector.js`.
 - **New Odoo field metadata**: add the ORM field to `FIELD_META_FIELDS` in
-  `content/odoo.js`, then render it in `renderOdooSection` in
+  `content/odoo.js`, then render it in `renderOdooTabContent` in
   `content/ui.js`. Any new content script file must also be added to
   `CONTENT_FILES` in `popup/popup.js` (in load order) or it will never be
   injected.
+- **New Field Finder source**: add another `scope.querySelectorAll(...)`
+  branch to `detector.listAllFields` in `content/detector.js` — it already
+  accepts an optional root element, so a scoped (e.g. wizard-only) search
+  works automatically as long as your new selector is queried against
+  the `scope` parameter, not `document` directly.

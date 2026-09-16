@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Odoo Field Inspector",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Click any form field or table column to inspect its HTML details, CSS selector, and XPath, with live Odoo field info when available.",
   "action": {
     "default_popup": "popup/popup.html",
