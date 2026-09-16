@@ -1066,11 +1066,37 @@
     return html;
   }
 
+  function renderSelectors(info) {
+    const isOdooXPath = info.xpath && info.xpath.startsWith("//field[");
+    const xpathLabel = isOdooXPath ? "Odoo View XPath" : "XPath";
+    const hint = isOdooXPath
+      ? `<div class="fi-empty-hint">For inherited XML views. If this field appears more than once, scope the expression to its parent in the view XML.</div>`
+      : "";
+    return `<div class="fi-row-label" style="margin:10px 0 2px;">CSS Selector</div>${copyableBlock(
+      info.cssSelector
+    )}<div class="fi-row-label" style="margin:8px 0 2px;">${xpathLabel}</div>${copyableBlock(info.xpath)}${hint}`;
+  }
+
   /** Builds the ordered list of { title, html } tabs for a Form Field panel. */
   function renderFormInfo(info) {
     const tabs = [];
+    const stateTable = table(
+        [
+          row("Current Value", info.currentValue),
+          row("Default Value", info.defaultValue),
+          row("Required", info.required ? "Yes" : "No", { pill: true }),
+          row("Read Only", info.readOnly ? "Yes" : "No", { pill: true }),
+          row("Disabled", info.disabled ? "Yes" : "No", { pill: true }),
+        ].join("")
+      );
 
-    if (info.odooFieldName) tabs.push({ title: "Odoo Field", icon: "odoo", html: renderOdooTabContent(info) });
+    if (info.odooFieldName) {
+      tabs.push({
+        title: "Odoo Field",
+        icon: "odoo",
+        html: renderOdooTabContent(info) + `<div class="fi-row-label" style="margin:10px 0 4px;">State</div>` + stateTable + renderSelectors(info),
+      });
+    }
 
     tabs.push({
       title: "Field Info",
@@ -1089,43 +1115,10 @@
       ),
     });
 
-    tabs.push({
-      title: "State",
-      icon: "state",
-      html: table(
-        [
-          row("Current Value", info.currentValue),
-          row("Default Value", info.defaultValue),
-          row("Required", info.required ? "Yes" : "No", { pill: true }),
-          row("Read Only", info.readOnly ? "Yes" : "No", { pill: true }),
-          row("Disabled", info.disabled ? "Yes" : "No", { pill: true }),
-        ].join("")
-      ),
-    });
+    if (!info.odooFieldName) tabs.push({ title: "State", icon: "state", html: stateTable });
 
-    tabs.push({
-      title: "Selectors",
-      icon: "selectors",
-      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
-        info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
-    });
+    if (!info.odooFieldName) tabs.push({ title: "Selectors", icon: "selectors", html: renderSelectors(info) });
 
-    tabs.push({
-      title: "Structure",
-      icon: "structure",
-      html:
-        table(
-          row("Parent Element", info.parentElement, { mono: true }) +
-            row(
-              "Form Name/ID",
-              info.owningForm ? `${info.owningForm.name || info.owningForm.id || "(unnamed form)"}` : "Not inside a <form>"
-            )
-        ) +
-        `<div class="fi-row-label" style="margin:10px 0 4px;">HTML Preview</div><div class="fi-html-preview">${escapeHtml(
-          info.htmlPreview
-        )}</div>`,
-    });
 
     if (Object.keys(info.validationAttributes || {}).length) {
       tabs.push({ title: "Validation", icon: "validation", html: attrList(info.validationAttributes) });
@@ -1165,12 +1158,8 @@
     tabs.push({
       title: "Selectors",
       icon: "selectors",
-      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
-        info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
+      html: renderSelectors(info),
     });
-
-    tabs.push({ title: "Structure", icon: "structure", html: `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>` });
 
     if (info.table) {
       tabs.push({
@@ -1213,7 +1202,7 @@
   function renderDataCellInfo(info) {
     const tabs = [];
 
-    if (info.odooFieldName) tabs.push({ title: "Odoo Field", icon: "odoo", html: renderOdooTabContent(info) });
+    if (info.odooFieldName) tabs.push({ title: "Odoo Field", icon: "odoo", html: renderOdooTabContent(info) + renderSelectors(info) });
 
     tabs.push({
       title: "Cell Info",
@@ -1231,15 +1220,7 @@
       ),
     });
 
-    tabs.push({
-      title: "Selectors",
-      icon: "selectors",
-      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
-        info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
-    });
-
-    tabs.push({ title: "Structure", icon: "structure", html: `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>` });
+    if (!info.odooFieldName) tabs.push({ title: "Selectors", icon: "selectors", html: renderSelectors(info) });
 
     if (Object.keys(info.dataAttributes || {}).length) tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
     if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });

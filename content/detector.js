@@ -346,7 +346,7 @@
       validationAttributes: controlEl ? utils.getValidationAttributes(controlEl) : {},
       otherAttributes: utils.getOtherAttributes(primary),
       cssSelector: utils.generateCssSelector(primary),
-      xpath: utils.generateXPath(primary),
+      xpath: utils.generateFieldXPath(primary, odooWidget && odooWidget.getAttribute("name")),
       parentElement: utils.describeParent(primary),
       owningForm: utils.describeOwningForm(primary),
       htmlPreview: utils.truncate(primary.outerHTML || "", 320),
@@ -423,7 +423,11 @@
       ariaAttributes: utils.getAriaAttributes(headerEl),
       otherAttributes: utils.getOtherAttributes(headerEl),
       cssSelector: utils.generateCssSelector(headerEl),
-      xpath: utils.generateXPath(headerEl),
+      xpath: utils.generateFieldXPath(
+        headerEl,
+        headerEl.closest(".o_list_view, .o_list_renderer, .o_list_table") &&
+          (headerEl.getAttribute("name") || headerEl.getAttribute("data-name") || headerEl.getAttribute("data-field"))
+      ),
       htmlPreview: utils.truncate(headerEl.outerHTML || "", 320),
       relatedInput,
       table: table
@@ -495,7 +499,10 @@
       ariaAttributes: utils.getAriaAttributes(cellEl),
       otherAttributes: utils.getOtherAttributes(cellEl),
       cssSelector: utils.generateCssSelector(cellEl),
-      xpath: utils.generateXPath(cellEl),
+      xpath: utils.generateFieldXPath(
+        cellEl,
+        (odooWidget || cellEl.closest(".o_list_view, .o_list_renderer, .o_list_table")) && odooFieldName
+      ),
       htmlPreview: utils.truncate(cellEl.outerHTML || "", 320),
     };
   };

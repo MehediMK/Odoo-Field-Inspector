@@ -132,6 +132,15 @@
     }
   };
 
+  // Odoo inheritance targets the XML view architecture, not rendered HTML.
+  // Technical field names are identifiers; unknown names retain the DOM XPath.
+  utils.generateFieldXPath = function (el, fieldName) {
+    if (typeof fieldName === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
+      return `//field[@name='${fieldName}']`;
+    }
+    return utils.generateXPath(el);
+  };
+
   function countXPathMatches(xpath) {
     try {
       return document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotLength;
