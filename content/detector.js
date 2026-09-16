@@ -54,6 +54,7 @@
     .join("");
   const ARIA_LABELLED_SELECTOR = `[aria-label]${ARIA_NONFIELD_EXCLUSIONS}, [aria-labelledby]${ARIA_NONFIELD_EXCLUSIONS}`;
   const LIST_HEADER_SELECTOR = 'th, [role="columnheader"]';
+  const DATA_CELL_SELECTOR = 'td, [role="gridcell"]';
   // Odoo web client: the technical model field name lives on the field's
   // wrapper div (Form/Kanban view), not on the <input> itself.
   const ODOO_FIELD_WIDGET_SELECTOR = ".o_field_widget[name]";
@@ -119,6 +120,15 @@
         // text. Without this, clicking directly on that text finds nothing.
         const odooField = el.closest(ODOO_FIELD_WIDGET_SELECTOR);
         if (odooField) return { kind: "form", el: odooField };
+      }
+
+      // List View data cell fallback: only once nothing more specific inside
+      // it matched above (e.g. an editable cell's actual <input> still wins,
+      // same as any other form control) — a plain readonly `<td>` gets its
+      // own structural (row/column) info instead of nothing at all.
+      if (settings.listView) {
+        const cell = el.closest(DATA_CELL_SELECTOR);
+        if (cell) return { kind: "listCell", el: cell };
       }
 
       return null;
@@ -425,6 +435,68 @@
             columnCount,
           }
         : null,
+    };
+  };
+
+  /**
+   * A specific data cell in a table/grid row — as opposed to buildColumnInfo,
+   * which describes the *column* (header). Only reached when the cell has no
+   * more specific recognizable control inside it (an editable cell's actual
+   * <input> is still resolved as a regular form field, same priority as
+   * everywhere else — see resolveInspectable).
+   */
+  detector.buildDataCellInfo = function (cellEl) {
+    const row = cellEl.closest('tr, [role="row"]');
+    const table = cellEl.closest('table, [role="grid"], [role="table"]');
+
+    let columnIndex = -1;
+    if (row) columnIndex = Array.from(row.children).indexOf(cellEl);
+
+    let rowIndex = -1;
+    let headerEl = null;
+    if (table) {
+      try {
+        const bodyRows = table.matches("table")
+          ? Array.from(table.tBodies[0] ? table.tBodies[0].rows : [])
+          : Array.from(table.querySelectorAll('[role="row"]')).filter((r) => !r.closest("thead") && !r.querySelector(LIST_HEADER_SELECTOR));
+        rowIndex = row ? bodyRows.indexOf(row) : -1;
+
+        const headerRow = table.matches("table")
+          ? table.tHead && table.tHead.rows[0]
+          : table.querySelector('[role="row"]');
+        if (headerRow && columnIndex >= 0) headerEl = headerRow.children[columnIndex] || null;
+      } catch (err) {
+        console.error("[Field Inspector] data cell row/column lookup failed:", err);
+      }
+    }
+
+    const columnName = headerEl
+      ? headerEl.textContent.trim() || headerEl.getAttribute("aria-label") || headerEl.getAttribute("title") || ""
+      : "";
+
+    // Odoo's list view renders `<td name="partner_id" class="o_data_cell">`
+    // directly (same pattern as the `<th data-name="...">` header and the
+    // form view's `.o_field_widget[name]`) — check the cell itself first,
+    // then fall back to a nested field widget for older/custom markups.
+    const odooWidget = cellEl.matches(ODOO_FIELD_WIDGET_SELECTOR) ? cellEl : cellEl.querySelector(ODOO_FIELD_WIDGET_SELECTOR);
+    const odooFieldName = cellEl.getAttribute("name") || (odooWidget ? odooWidget.getAttribute("name") || "" : "");
+
+    return {
+      kind: "listCell",
+      columnName,
+      columnIndex,
+      rowIndex,
+      element: cellEl.tagName,
+      cellText: cellEl.textContent.trim(),
+      id: cellEl.id || "",
+      odooFieldName,
+      classes: cellEl.className && typeof cellEl.className === "string" ? cellEl.className.trim() : "",
+      dataAttributes: utils.getDataAttributes(cellEl),
+      ariaAttributes: utils.getAriaAttributes(cellEl),
+      otherAttributes: utils.getOtherAttributes(cellEl),
+      cssSelector: utils.generateCssSelector(cellEl),
+      xpath: utils.generateXPath(cellEl),
+      htmlPreview: utils.truncate(cellEl.outerHTML || "", 320),
     };
   };
 

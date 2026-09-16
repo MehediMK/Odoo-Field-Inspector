@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   listView: true,
   highlight: true,
   copyFormat: "text",
+  odooMode: true,
 };
 
 const CONTENT_FILES = ["content/utils.js", "content/odoo.js", "content/detector.js", "content/ui.js", "content/content.js"];
@@ -90,6 +91,7 @@ function setControlsEnabled(enabled) {
   els.formView.disabled = !enabled;
   els.listView.disabled = !enabled;
   els.highlight.disabled = !enabled;
+  els.odooMode.disabled = !enabled;
 }
 
 async function pushSettingsToTab(settings) {
@@ -143,6 +145,7 @@ async function onSettingChange() {
     formView: els.formView.checked,
     listView: els.listView.checked,
     highlight: els.highlight.checked,
+    odooMode: els.odooMode.checked,
     copyFormat: document.querySelector('input[name="fp-copy-format"]:checked').value,
   };
   await saveSettings(settings);
@@ -153,6 +156,7 @@ function applySettingsToUI(settings) {
   els.formView.checked = settings.formView;
   els.listView.checked = settings.listView;
   els.highlight.checked = settings.highlight;
+  els.odooMode.checked = settings.odooMode;
   const radio = document.getElementById(settings.copyFormat === "json" ? "fp-copy-json" : "fp-copy-text");
   if (radio) radio.checked = true;
 }
@@ -163,6 +167,7 @@ async function init() {
   els.formView = document.getElementById("fp-form-view");
   els.listView = document.getElementById("fp-list-view");
   els.highlight = document.getElementById("fp-highlight");
+  els.odooMode = document.getElementById("fp-odoo-mode");
   els.version = document.getElementById("fp-version");
 
   try {
@@ -204,6 +209,7 @@ async function init() {
   els.formView.addEventListener("change", onSettingChange);
   els.listView.addEventListener("change", onSettingChange);
   els.highlight.addEventListener("change", onSettingChange);
+  els.odooMode.addEventListener("change", onSettingChange);
   document.getElementById("fp-copy-text").addEventListener("change", onSettingChange);
   document.getElementById("fp-copy-json").addEventListener("change", onSettingChange);
 }

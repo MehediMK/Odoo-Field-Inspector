@@ -50,6 +50,14 @@
     </section>
 
     <section class="fp-card">
+      <div class="fp-card-title">Odoo Developer Mode</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-odoo-mode" />
+        <span>Look up live field definitions from Odoo <em>(sends the model + field name to the Odoo server you're already logged into — see About &amp; Privacy)</em></span>
+      </label>
+    </section>
+
+    <section class="fp-card">
       <div class="fp-card-title">Copy Behavior</div>
       <label class="fp-radio-row">
         <input type="radio" name="fp-copy-format" value="text" id="fp-copy-text" />
@@ -64,7 +72,8 @@
     <details class="fp-card fp-about">
       <summary>About &amp; Privacy</summary>
       <div class="fp-about-body">
-        <p>Field Inspector reads only the HTML of the page you're currently viewing, entirely inside your browser. It never sends page content, field values, or browsing activity to any server, and it never modifies form data — clicking a field only opens a read-only info panel.</p>
+        <p>Field Inspector reads only the HTML of the page you're currently viewing, entirely inside your browser. It never modifies form data — clicking a field only opens a read-only info panel.</p>
+        <p><strong>Odoo Developer Mode</strong> is the one exception to "nothing ever leaves your browser": when it's on and a clicked field is recognized as an Odoo field, the field's model + technical name (never its value) are sent to the same Odoo server you're already logged into, to fetch that field's real definition. Turn it off above to disable this entirely — everything else keeps working.</p>
         <p><strong>Permissions used:</strong></p>
         <ul>
           <li><code>activeTab</code> / <code>scripting</code> — inject the inspector only into the tab you explicitly enable it on.</li>

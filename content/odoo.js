@@ -141,5 +141,86 @@
     return promise;
   };
 
+  const viewArchCache = new Map(); // model -> Promise<string|null|{error}>
+
+  /**
+   * Fetches (and caches per model) the arch XML of the model's default form
+   * view via get_views — the same RPC the Odoo web client itself uses to
+   * render a form. This is a best-effort approximation: if the currently
+   * open view isn't the *default* form view (a custom view id was used),
+   * the arch here can differ. Resolves to the arch XML string, `null` if
+   * unavailable, or `{ error }` if the RPC failed.
+   */
+  function fetchFormArch(model) {
+    if (viewArchCache.has(model)) return viewArchCache.get(model);
+    const promise = odoo
+      .call(model, "get_views", [], { views: [[false, "form"]], options: {} })
+      .then((res) => (res && res.views && res.views.form && res.views.form.arch) || null)
+      .catch((err) => {
+        console.error("[Field Inspector] Odoo view arch lookup failed:", err);
+        return { error: (err && err.message) || String(err) };
+      });
+    viewArchCache.set(model, promise);
+    return promise;
+  }
+
+  /** Count ancestor <field> elements — used to prefer the least-nested match. */
+  function fieldAncestorDepth(node) {
+    let n = node.parentElement;
+    let depth = 0;
+    while (n) {
+      if (n.tagName === "field") depth++;
+      n = n.parentElement;
+    }
+    return depth;
+  }
+
+  /**
+   * Finds how `fieldName` is actually declared in `model`'s default form
+   * view arch: its widget=, domain=, context=, invisible=, required=,
+   * readonly=, options=, groups=, string= — the view-level overrides that
+   * `ir.model.fields` alone can't show, since that's the model-level
+   * definition only. When a field appears more than once (e.g. also as a
+   * one2many sub-view's own column), the least-nested match is preferred,
+   * since a deeply-nested one is more likely to belong to an embedded
+   * sub-view rather than the field the user actually clicked.
+   *
+   * Resolves to `{ attrs, occurrences }`, `null` (field not found in the
+   * arch — it may only exist in a different view), or `{ error }`.
+   */
+  odoo.fetchViewFieldAttrs = async function (model, fieldName) {
+    if (!model || !fieldName) return null;
+    try {
+      const arch = await fetchFormArch(model);
+      if (!arch || typeof arch !== "string") return arch && arch.error ? arch : null;
+
+      const doc = new DOMParser().parseFromString(arch, "application/xml");
+      if (doc.querySelector("parsererror")) return null;
+
+      const matches = Array.from(doc.getElementsByTagName("field")).filter((el) => el.getAttribute("name") === fieldName);
+      if (!matches.length) return null;
+
+      let best = matches[0];
+      let bestDepth = fieldAncestorDepth(best);
+      for (const m of matches.slice(1)) {
+        const d = fieldAncestorDepth(m);
+        if (d < bestDepth) {
+          best = m;
+          bestDepth = d;
+        }
+      }
+
+      const attrs = {};
+      for (const a of Array.from(best.attributes)) {
+        if (a.name === "name") continue; // redundant, already known
+        attrs[a.name] = a.value;
+      }
+      return { attrs, occurrences: matches.length };
+    } catch (err) {
+      console.error("[Field Inspector] Odoo view field attrs parse failed:", err);
+      return { error: (err && err.message) || String(err) };
+    }
+  };
+
   window.__FI__.odoo = odoo;
 })();

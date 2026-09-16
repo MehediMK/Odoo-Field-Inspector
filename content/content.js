@@ -25,6 +25,7 @@
     listView: true,
     highlight: true,
     copyFormat: "text",
+    odooMode: true,
   };
 
   const state = {
@@ -69,11 +70,18 @@
       e.preventDefault();
       e.stopPropagation();
 
-      const info =
-        resolved.kind === "list" ? detector.buildColumnInfo(resolved.el) : detector.buildFormFieldInfo(resolved.el);
+      let info;
+      if (resolved.kind === "list") {
+        info = detector.buildColumnInfo(resolved.el);
+      } else if (resolved.kind === "listCell") {
+        info = detector.buildDataCellInfo(resolved.el);
+      } else {
+        info = detector.buildFormFieldInfo(resolved.el);
+      }
 
       const odoo = window.__FI__.odoo;
-      if (info.kind === "form" && info.odooFieldName && odoo) {
+      const canLookUpOdoo = state.settings.odooMode && info.odooFieldName && odoo && (info.kind === "form" || info.kind === "listCell");
+      if (canLookUpOdoo) {
         info.odooModel = odoo.detectCurrentModel();
       }
 
@@ -83,10 +91,13 @@
       // showing (synchronous DOM-derived info first, network second) and is
       // race-guarded against the user clicking a different field before the
       // RPC resolves — see ui.beginOdooLookup/applyOdooFieldMeta.
-      if (info.kind === "form" && info.odooFieldName && info.odooModel && odoo) {
+      if (canLookUpOdoo && info.odooModel) {
         const requestId = ui.beginOdooLookup();
         odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
           ui.applyOdooFieldMeta(requestId, meta);
+        });
+        odoo.fetchViewFieldAttrs(info.odooModel, info.odooFieldName).then((viewAttrs) => {
+          ui.applyOdooViewAttrs(requestId, viewAttrs);
         });
       }
     } catch (err) {

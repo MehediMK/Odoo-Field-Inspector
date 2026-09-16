@@ -38,15 +38,20 @@ contenteditable field, or an ARIA-labelled custom control.
 LIST VIEW
 Click a <th> or [role="columnheader"] to see the column name, index,
 attributes, selector, and a sample of the input control used in that
-column.
+column. Click a plain data cell instead of the header to see its row/
+column position and (on Odoo pages) the same live field lookup below.
 
 BUILT FOR ODOO DEVELOPERS
 When a clicked field belongs to an Odoo form, list, or wizard, the panel
 leads with a live Odoo Field Definition pulled straight from that Odoo
 server: the model, the field's real ORM type, relation, required/
-readonly/stored state, help text, decoded selection options, and a
-ready-to-paste <field name="..."/> view XML snippet. No more guessing a
-field's technical name from CSS classes.
+readonly/stored state, help text, decoded selection options, how the
+field is actually declared in the current view (widget=, domain=,
+context=, invisible=, required=, ...), a direct link to the field's own
+admin record, and a ready-to-paste <field name="..."/> view XML snippet.
+No more guessing a field's technical name from CSS classes. This has its
+own on/off toggle in the popup, separate from the general inspector
+switch, and follows your system's light/dark theme.
 
 NEVER TOUCHES YOUR DATA
 While inspecting, clicks on fields are intercepted before the page sees
@@ -95,7 +100,7 @@ server, for the same inspection purpose.
 |---|---|
 | `activeTab` | Needed so the inspector can be injected into the current tab only after the user explicitly clicks the toolbar icon and enables it — not on every site automatically. |
 | `scripting` | Needed to inject the inspector's content scripts into the active tab on demand, when the user turns "Enable Inspector" on in the popup. |
-| `storage` | Needed to save the user's four inspector preferences (Form View / List View / Highlight / Copy Format) locally via `chrome.storage.local`, so they persist between sessions. |
+| `storage` | Needed to save the user's inspector preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode) locally via `chrome.storage.local`, so they persist between sessions. |
 
 **Data usage disclosure** (checkboxes in the "Data collected" section):
 - Check **Website content** — because the Odoo lookup reads/sends a
@@ -123,21 +128,25 @@ instance, since only you can log into it).
 
 ## Package
 
-Upload `field-inspector-v<version>.zip` (built alongside this file — see
-the packaging step in the conversation that produced it). It contains
-only the files `manifest.json` references: `manifest.json`, `background.js`,
-`content/`, `content.css`, `popup/`, `icons/`. `README.md` and this file
-are dev-only and intentionally excluded from the package.
+Upload `field-inspector-v1.2.0.zip` (rebuilt after the Odoo Developer Mode
+toggle, view-declared field attributes, list-cell inspection, the field
+record link, and dark theme were added). It contains only the files
+`manifest.json` references: `manifest.json`, `background.js`, `content/`,
+`content.css`, `popup/`, `icons/`. `README.md` and this file are dev-only
+and intentionally excluded from the package.
 
 ## Before you submit
 
 1. One-time $5 Chrome Web Store developer registration fee (if you
    haven't already registered a developer account).
 2. Confirm the "Odoo Field Inspector" name isn't already taken — if it is,
-   pick a variant (e.g. "Odoo Field Inspector for Odoo") and update
+   pick a variant (e.g. "Field Inspector for Odoo") and update
    `manifest.json`'s `name` to match before rebuilding the zip.
 3. Load-unpacked test the exact zipped contents one more time (not just
    your working directory) to make sure nothing needed got excluded.
-4. Submissions that request no host permissions and have a clear single
+4. Consider a fresh screenshot showing the "Declared In Current View" and
+   "Open in Odoo" parts of the panel, and the new Odoo Developer Mode
+   toggle in the popup — `promo/screenshot_1_panel.png` predates those.
+5. Submissions that request no host permissions and have a clear single
    purpose (this one) typically review faster, but first-time developer
    accounts can still take several business days.

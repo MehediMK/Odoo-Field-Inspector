@@ -13,7 +13,101 @@
   const HOST_ID = "__fi_inspector_host__";
 
   const PANEL_CSS = `
-    :host { all: initial; }
+    :host {
+      all: initial;
+      --fi-bg: #ffffff;
+      --fi-fg: #1f2430;
+      --fi-shadow: 0 8px 32px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06);
+      --fi-header-bg: #111827;
+      --fi-header-fg: #f8fafc;
+      --fi-badge-form-bg: #2563eb;
+      --fi-badge-list-bg: #7c3aed;
+      --fi-close-fg: #cbd5e1;
+      --fi-close-hover-bg: rgba(255,255,255,0.12);
+      --fi-close-hover-fg: #ffffff;
+      --fi-section-title-fg: #64748b;
+      --fi-section-border: #e5e7eb;
+      --fi-row-label-fg: #64748b;
+      --fi-row-value-fg: #111827;
+      --fi-pill-bg: #f1f5f9;
+      --fi-pill-fg: #334155;
+      --fi-pill-yes-bg: #dcfce7;
+      --fi-pill-yes-fg: #166534;
+      --fi-pill-no-bg: #f1f5f9;
+      --fi-pill-no-fg: #64748b;
+      --fi-copyable-bg: #f8fafc;
+      --fi-copyable-border: #e5e7eb;
+      --fi-code-fg: #0f172a;
+      --fi-copy-btn-border: #e2e8f0;
+      --fi-copy-btn-bg: #ffffff;
+      --fi-copy-btn-fg: #334155;
+      --fi-copy-btn-hover-bg: #eef2ff;
+      --fi-copy-btn-hover-border: #c7d2fe;
+      --fi-copied-bg: #dcfce7;
+      --fi-copied-border: #86efac;
+      --fi-copied-fg: #166534;
+      --fi-preview-bg: #0f172a;
+      --fi-preview-fg: #e2e8f0;
+      --fi-attr-bg: #f8fafc;
+      --fi-attr-key: #7c3aed;
+      --fi-attr-val: #0f172a;
+      --fi-hint-fg: #94a3b8;
+      --fi-footer-bg: #f8fafc;
+      --fi-footer-border: #e5e7eb;
+      --fi-copy-all-bg: #111827;
+      --fi-copy-all-fg: #ffffff;
+      --fi-copy-all-hover-bg: #1f2937;
+      --fi-copy-all-copied-bg: #16a34a;
+      --fi-link: #2563eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :host {
+        --fi-bg: #1a1d26;
+        --fi-fg: #e6e9f0;
+        --fi-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        --fi-header-bg: #0b0e14;
+        --fi-header-fg: #f2f4f8;
+        --fi-badge-form-bg: #3b6fe0;
+        --fi-badge-list-bg: #9061e8;
+        --fi-close-fg: #8b93a7;
+        --fi-close-hover-bg: rgba(255,255,255,0.1);
+        --fi-close-hover-fg: #ffffff;
+        --fi-section-title-fg: #8b93a7;
+        --fi-section-border: #2c313d;
+        --fi-row-label-fg: #8b93a7;
+        --fi-row-value-fg: #e6e9f0;
+        --fi-pill-bg: #262b36;
+        --fi-pill-fg: #c3c9d6;
+        --fi-pill-yes-bg: #163a24;
+        --fi-pill-yes-fg: #5fd88a;
+        --fi-pill-no-bg: #262b36;
+        --fi-pill-no-fg: #8b93a7;
+        --fi-copyable-bg: #20242e;
+        --fi-copyable-border: #2c313d;
+        --fi-code-fg: #dbe1ee;
+        --fi-copy-btn-border: #333947;
+        --fi-copy-btn-bg: #20242e;
+        --fi-copy-btn-fg: #c3c9d6;
+        --fi-copy-btn-hover-bg: #262c3d;
+        --fi-copy-btn-hover-border: #3b4a6b;
+        --fi-copied-bg: #163a24;
+        --fi-copied-border: #1f7a44;
+        --fi-copied-fg: #5fd88a;
+        --fi-preview-bg: #0b0e14;
+        --fi-preview-fg: #d7dbe4;
+        --fi-attr-bg: #20242e;
+        --fi-attr-key: #b79bf5;
+        --fi-attr-val: #dbe1ee;
+        --fi-hint-fg: #6b7385;
+        --fi-footer-bg: #171a22;
+        --fi-footer-border: #2c313d;
+        --fi-copy-all-bg: #2f6fed;
+        --fi-copy-all-fg: #ffffff;
+        --fi-copy-all-hover-bg: #4a80f0;
+        --fi-copy-all-copied-bg: #1f9d55;
+        --fi-link: #7fa1f5;
+      }
+    }
     * { box-sizing: border-box; }
     .fi-panel {
       position: fixed;
@@ -25,10 +119,10 @@
       max-height: calc(100vh - 32px);
       display: flex;
       flex-direction: column;
-      background: #ffffff;
-      color: #1f2430;
+      background: var(--fi-bg);
+      color: var(--fi-fg);
       border-radius: 10px;
-      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06);
+      box-shadow: var(--fi-shadow);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 13px;
       line-height: 1.45;
@@ -51,8 +145,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 14px;
-      background: #111827;
-      color: #f8fafc;
+      background: var(--fi-header-bg);
+      color: var(--fi-header-fg);
       flex: 0 0 auto;
     }
     .fi-header-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
@@ -63,22 +157,22 @@
       text-transform: uppercase;
       padding: 2px 7px;
       border-radius: 999px;
-      background: #2563eb;
+      background: var(--fi-badge-form-bg);
       color: white;
     }
-    .fi-badge.list { background: #7c3aed; }
+    .fi-badge.list { background: var(--fi-badge-list-bg); }
     .fi-close-btn {
       appearance: none;
       border: none;
       background: transparent;
-      color: #cbd5e1;
+      color: var(--fi-close-fg);
       font-size: 18px;
       line-height: 1;
       cursor: pointer;
       padding: 2px 6px;
       border-radius: 6px;
     }
-    .fi-close-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .fi-close-btn:hover { background: var(--fi-close-hover-bg); color: var(--fi-close-hover-fg); }
     .fi-body { overflow-y: auto; padding: 10px 14px 14px; flex: 1 1 auto; }
     .fi-section { margin-top: 14px; }
     .fi-section:first-child { margin-top: 4px; }
@@ -87,37 +181,38 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #64748b;
+      color: var(--fi-section-title-fg);
       margin-bottom: 6px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--fi-section-border);
       padding-bottom: 4px;
     }
     .fi-row { display: flex; gap: 10px; padding: 4px 0; align-items: flex-start; }
-    .fi-row-label { flex: 0 0 108px; color: #64748b; font-weight: 600; font-size: 12px; padding-top: 1px; }
+    .fi-row-label { flex: 0 0 108px; color: var(--fi-row-label-fg); font-weight: 600; font-size: 12px; padding-top: 1px; }
     .fi-row-value {
       flex: 1 1 auto;
-      color: #111827;
+      color: var(--fi-row-value-fg);
       word-break: break-word;
       font-size: 12.5px;
     }
     .fi-row-value.fi-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+    .fi-link { color: var(--fi-link); }
     .fi-pill {
       display: inline-block;
       font-size: 11px;
       font-weight: 600;
       padding: 1px 7px;
       border-radius: 999px;
-      background: #f1f5f9;
-      color: #334155;
+      background: var(--fi-pill-bg);
+      color: var(--fi-pill-fg);
     }
-    .fi-pill.yes { background: #dcfce7; color: #166534; }
-    .fi-pill.no { background: #f1f5f9; color: #64748b; }
+    .fi-pill.yes { background: var(--fi-pill-yes-bg); color: var(--fi-pill-yes-fg); }
+    .fi-pill.no { background: var(--fi-pill-no-bg); color: var(--fi-pill-no-fg); }
     .fi-copyable {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: #f8fafc;
-      border: 1px solid #e5e7eb;
+      background: var(--fi-copyable-bg);
+      border: 1px solid var(--fi-copyable-border);
       border-radius: 6px;
       padding: 6px 8px;
       margin-top: 4px;
@@ -127,24 +222,24 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 11.5px;
       word-break: break-all;
-      color: #0f172a;
+      color: var(--fi-code-fg);
     }
     .fi-copy-btn {
       appearance: none;
-      border: 1px solid #e2e8f0;
-      background: #ffffff;
+      border: 1px solid var(--fi-copy-btn-border);
+      background: var(--fi-copy-btn-bg);
       border-radius: 5px;
       cursor: pointer;
       font-size: 12px;
       padding: 3px 7px;
       flex: 0 0 auto;
-      color: #334155;
+      color: var(--fi-copy-btn-fg);
     }
-    .fi-copy-btn:hover { background: #eef2ff; border-color: #c7d2fe; }
-    .fi-copy-btn.fi-copied { background: #dcfce7; border-color: #86efac; color: #166534; }
+    .fi-copy-btn:hover { background: var(--fi-copy-btn-hover-bg); border-color: var(--fi-copy-btn-hover-border); }
+    .fi-copy-btn.fi-copied { background: var(--fi-copied-bg); border-color: var(--fi-copied-border); color: var(--fi-copied-fg); }
     .fi-html-preview {
-      background: #0f172a;
-      color: #e2e8f0;
+      background: var(--fi-preview-bg);
+      color: var(--fi-preview-fg);
       border-radius: 6px;
       padding: 8px 9px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -160,28 +255,28 @@
       gap: 6px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 11.5px;
-      background: #f8fafc;
+      background: var(--fi-attr-bg);
       border-radius: 4px;
       padding: 3px 6px;
     }
-    .fi-attr-key { color: #7c3aed; }
-    .fi-attr-val { color: #0f172a; word-break: break-all; }
-    .fi-empty-hint { color: #94a3b8; font-size: 12px; font-style: italic; }
-    .fi-footer { flex: 0 0 auto; padding: 10px 14px; border-top: 1px solid #e5e7eb; background: #f8fafc; }
+    .fi-attr-key { color: var(--fi-attr-key); }
+    .fi-attr-val { color: var(--fi-attr-val); word-break: break-all; }
+    .fi-empty-hint { color: var(--fi-hint-fg); font-size: 12px; font-style: italic; }
+    .fi-footer { flex: 0 0 auto; padding: 10px 14px; border-top: 1px solid var(--fi-footer-border); background: var(--fi-footer-bg); }
     .fi-copy-all-btn {
       width: 100%;
       appearance: none;
       border: none;
-      background: #111827;
-      color: white;
+      background: var(--fi-copy-all-bg);
+      color: var(--fi-copy-all-fg);
       font-weight: 600;
       font-size: 13px;
       padding: 9px 10px;
       border-radius: 7px;
       cursor: pointer;
     }
-    .fi-copy-all-btn:hover { background: #1f2937; }
-    .fi-copy-all-btn.fi-copied { background: #16a34a; }
+    .fi-copy-all-btn:hover { background: var(--fi-copy-all-hover-bg); }
+    .fi-copy-all-btn.fi-copied { background: var(--fi-copy-all-copied-bg); }
     @media (max-width: 460px) {
       .fi-panel { left: 12px; right: 12px; top: 12px; bottom: 12px; width: auto; }
     }
@@ -327,8 +422,39 @@
     return out.length ? out : null;
   }
 
+  function renderViewAttrsBlock(info) {
+    const va = info.odooViewAttrs;
+    let body;
+    if (va === undefined) {
+      body = `<div class="fi-empty-hint" style="padding:4px 0;">Looking up how this field is declared in the current view…</div>`;
+    } else if (va === null) {
+      body = `<div class="fi-empty-hint" style="padding:4px 0;">Not found in this model's default form view arch — it may only appear in a different view (list/kanban), or a non-default form view is actually in use.</div>`;
+    } else if (va.error) {
+      body = `<div class="fi-empty-hint" style="padding:4px 0;">Could not fetch the view: ${escapeHtml(va.error)}</div>`;
+    } else {
+      const attrs = va.attrs || {};
+      body = Object.keys(attrs).length
+        ? attrList(attrs)
+        : `<div class="fi-empty-hint" style="padding:4px 0;">Declared with no extra attributes: &lt;field name="${escapeHtml(
+            info.odooFieldName
+          )}"/&gt;</div>`;
+      if (va.occurrences > 1) {
+        body += `<div class="fi-empty-hint" style="padding:4px 0;">Appears ${va.occurrences} times in this view — showing the least-nested match.</div>`;
+      }
+    }
+    return `<div class="fi-row-label" style="margin:10px 0 2px;">Declared In Current View (form)</div>${body}`;
+  }
+
   function renderOdooSection(info) {
     if (!info.odooFieldName) return "";
+
+    if (!ui.settingsRef.odooMode) {
+      return section(
+        "Odoo Field Definition",
+        row("Technical Field Name", info.odooFieldName, { mono: true }) +
+          `<div class="fi-empty-hint" style="padding:4px 0;">Odoo Developer Mode is off — turn it on in the popup for a live model/type/relation lookup from your Odoo server.</div>`
+      );
+    }
 
     const rows = [
       row("Model", info.odooModel || "(not detected)", { mono: true }),
@@ -369,7 +495,18 @@
             .join("")}</div>`
         );
       }
+
+      if (meta.id != null) {
+        const url = `${location.origin}/web#model=ir.model.fields&id=${encodeURIComponent(meta.id)}&view_type=form`;
+        rows.push(
+          `<div class="fi-row"><div class="fi-row-label">Field Record</div><div class="fi-row-value"><a class="fi-link" href="${escapeHtml(
+            url
+          )}" target="_blank" rel="noopener">Open in Odoo (Settings → Technical → Fields) ↗</a></div></div>`
+        );
+      }
     }
+
+    rows.push(renderViewAttrsBlock(info));
 
     const snippet = `<field name="${info.odooFieldName}"/>`;
     rows.push(`<div class="fi-row-label" style="margin:8px 0 2px;">View XML Snippet</div>${copyableBlock(snippet)}`);
@@ -502,6 +639,46 @@
     return html;
   }
 
+  /** A single table/grid data cell — column+row context, as opposed to renderListInfo's column-only view. */
+  function renderDataCellInfo(info) {
+    let html = "";
+    html += renderOdooSection(info);
+
+    html += section(
+      "Cell Info",
+      [
+        row("Column Name", info.columnName || "—"),
+        row("Column Index", String(info.columnIndex)),
+        row("Row Index", info.rowIndex >= 0 ? String(info.rowIndex) : "—"),
+        row("Element Type", info.element, { mono: true }),
+        row("Cell Text", info.cellText),
+        row("ID", info.id, { mono: true }),
+        row("CSS Classes", info.classes, { mono: true }),
+      ].join("")
+    );
+
+    html += section(
+      "Selectors",
+      `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
+        info.cssSelector
+      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`
+    );
+
+    html += section("HTML Structure", `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>`);
+
+    if (Object.keys(info.dataAttributes || {}).length) html += section("Data Attributes", attrList(info.dataAttributes));
+    if (Object.keys(info.ariaAttributes || {}).length) html += section("ARIA Attributes", attrList(info.ariaAttributes));
+    if (Object.keys(info.otherAttributes || {}).length) html += section("Other Attributes", attrList(info.otherAttributes));
+
+    return html;
+  }
+
+  function renderBody(info) {
+    if (info.kind === "list") return renderListInfo(info);
+    if (info.kind === "listCell") return renderDataCellInfo(info);
+    return renderFormInfo(info);
+  }
+
   let odooRequestSeq = 0;
 
   ui.showPanel = function (info, settings) {
@@ -514,10 +691,11 @@
       odooRequestSeq += 1;
 
       const badge = ui.panelEl.querySelector("#fi-kind-badge");
-      badge.textContent = info.kind === "list" ? "List / Column" : "Form Field";
-      badge.classList.toggle("list", info.kind === "list");
+      const badgeText = { list: "List / Column", listCell: "List / Cell" }[info.kind] || "Form Field";
+      badge.textContent = badgeText;
+      badge.classList.toggle("list", info.kind === "list" || info.kind === "listCell");
 
-      ui.bodyEl.innerHTML = info.kind === "list" ? renderListInfo(info) : renderFormInfo(info);
+      ui.bodyEl.innerHTML = renderBody(info);
       ui.panelEl.hidden = false;
     } catch (err) {
       console.error("[Field Inspector] showPanel failed:", err);
@@ -529,12 +707,24 @@
     return odooRequestSeq;
   };
 
+  function canHaveOdooLookup(info) {
+    return !!info && (info.kind === "form" || info.kind === "listCell");
+  }
+
   /** Applies a live Odoo field-metadata result, but only if it's still for the field currently on screen. */
   ui.applyOdooFieldMeta = function (requestId, meta) {
     if (requestId !== odooRequestSeq) return; // stale: a different field/panel is showing now
-    if (!ui.lastInfo || ui.lastInfo.kind !== "form") return;
+    if (!canHaveOdooLookup(ui.lastInfo)) return;
     ui.lastInfo.odooFieldMeta = meta;
-    if (ui.bodyEl) ui.bodyEl.innerHTML = renderFormInfo(ui.lastInfo);
+    if (ui.bodyEl) ui.bodyEl.innerHTML = renderBody(ui.lastInfo);
+  };
+
+  /** Applies a live "how is this field declared in the current view" result, same staleness guard as above. */
+  ui.applyOdooViewAttrs = function (requestId, viewAttrs) {
+    if (requestId !== odooRequestSeq) return;
+    if (!canHaveOdooLookup(ui.lastInfo)) return;
+    ui.lastInfo.odooViewAttrs = viewAttrs;
+    if (ui.bodyEl) ui.bodyEl.innerHTML = renderBody(ui.lastInfo);
   };
 
   ui.closePanel = function () {
@@ -555,6 +745,48 @@
     ui.bodyEl = null;
   };
 
+  /** Plain-text rendering of the live Odoo section, shared by the Form Field and List Cell copy-all text. */
+  function buildOdooTextBlock(info) {
+    if (!info.odooFieldName) return [];
+    const lines = [`--- Odoo Field Definition (live) ---`];
+    if (!ui.settingsRef.odooMode) {
+      lines.push(`Technical Field Name: ${info.odooFieldName}`);
+      lines.push(`(Odoo Developer Mode is off — no live lookup was performed)`);
+      lines.push(`---`);
+      return lines;
+    }
+    lines.push(`Model: ${info.odooModel || "(not detected)"}`);
+    lines.push(`Technical Field Name: ${info.odooFieldName}`);
+    const meta = info.odooFieldMeta;
+    if (meta && !meta.error) {
+      lines.push(`Label (field_description): ${meta.field_description || ""}`);
+      lines.push(`ORM Type: ${meta.ttype}`);
+      if (meta.relation) lines.push(`Relation Model: ${meta.relation}`);
+      lines.push(`Required: ${meta.required ? "Yes" : "No"}`);
+      lines.push(`Readonly: ${meta.readonly ? "Yes" : "No"}`);
+      lines.push(`Stored: ${meta.store ? "Yes" : "No"}`);
+      if (meta.related) lines.push(`Related Path: ${meta.related}`);
+      if (meta.compute) lines.push(`Computed: Yes`);
+      if (meta.help) lines.push(`Help Text: ${meta.help}`);
+      if (meta.id != null) lines.push(`Field Record: ${location.origin}/web#model=ir.model.fields&id=${meta.id}&view_type=form`);
+    } else if (meta && meta.error) {
+      lines.push(`(Odoo backend lookup failed: ${meta.error})`);
+    } else if (meta === null) {
+      lines.push(`(No matching ir.model.fields row found)`);
+    } else {
+      lines.push(`(Odoo backend lookup was still in progress when copied)`);
+    }
+
+    const va = info.odooViewAttrs;
+    if (va && !va.error && va.attrs && Object.keys(va.attrs).length) {
+      lines.push(`Declared In Current View (form): ${JSON.stringify(va.attrs)}`);
+    }
+
+    lines.push(`View XML Snippet: <field name="${info.odooFieldName}"/>`);
+    lines.push(`---`);
+    return lines;
+  }
+
   ui.buildCopyAllText = function (info, format) {
     if (format === "json") {
       try {
@@ -567,31 +799,7 @@
     const lines = [];
     if (info.kind === "form") {
       lines.push(`Field Inspector — Form Field`);
-      if (info.odooFieldName) {
-        lines.push(`--- Odoo Field Definition (live) ---`);
-        lines.push(`Model: ${info.odooModel || "(not detected)"}`);
-        lines.push(`Technical Field Name: ${info.odooFieldName}`);
-        const meta = info.odooFieldMeta;
-        if (meta && !meta.error) {
-          lines.push(`Label (field_description): ${meta.field_description || ""}`);
-          lines.push(`ORM Type: ${meta.ttype}`);
-          if (meta.relation) lines.push(`Relation Model: ${meta.relation}`);
-          lines.push(`Required: ${meta.required ? "Yes" : "No"}`);
-          lines.push(`Readonly: ${meta.readonly ? "Yes" : "No"}`);
-          lines.push(`Stored: ${meta.store ? "Yes" : "No"}`);
-          if (meta.related) lines.push(`Related Path: ${meta.related}`);
-          if (meta.compute) lines.push(`Computed: Yes`);
-          if (meta.help) lines.push(`Help Text: ${meta.help}`);
-        } else if (meta && meta.error) {
-          lines.push(`(Odoo backend lookup failed: ${meta.error})`);
-        } else if (meta === null) {
-          lines.push(`(No matching ir.model.fields row found)`);
-        } else {
-          lines.push(`(Odoo backend lookup was still in progress when copied)`);
-        }
-        lines.push(`View XML Snippet: <field name="${info.odooFieldName}"/>`);
-        lines.push(`---`);
-      }
+      lines.push(...buildOdooTextBlock(info));
       lines.push(`Field Label: ${info.fieldLabel}`);
       lines.push(`HTML Element: ${info.element}`);
       lines.push(`Field Type: ${info.fieldType}`);
@@ -612,6 +820,28 @@
       if (Object.keys(info.validationAttributes || {}).length) {
         lines.push(`Validation Attributes: ${JSON.stringify(info.validationAttributes)}`);
       }
+      if (Object.keys(info.dataAttributes || {}).length) {
+        lines.push(`Data Attributes: ${JSON.stringify(info.dataAttributes)}`);
+      }
+      if (Object.keys(info.ariaAttributes || {}).length) {
+        lines.push(`ARIA Attributes: ${JSON.stringify(info.ariaAttributes)}`);
+      }
+      if (Object.keys(info.otherAttributes || {}).length) {
+        lines.push(`Other Attributes: ${JSON.stringify(info.otherAttributes)}`);
+      }
+      lines.push(`HTML: ${info.htmlPreview}`);
+    } else if (info.kind === "listCell") {
+      lines.push(`Field Inspector — List Cell`);
+      lines.push(...buildOdooTextBlock(info));
+      lines.push(`Column Name: ${info.columnName}`);
+      lines.push(`Column Index: ${info.columnIndex}`);
+      lines.push(`Row Index: ${info.rowIndex}`);
+      lines.push(`Element Type: ${info.element}`);
+      lines.push(`Cell Text: ${info.cellText}`);
+      lines.push(`ID: ${info.id}`);
+      lines.push(`CSS Classes: ${info.classes}`);
+      lines.push(`CSS Selector: ${info.cssSelector}`);
+      lines.push(`XPath: ${info.xpath}`);
       if (Object.keys(info.dataAttributes || {}).length) {
         lines.push(`Data Attributes: ${JSON.stringify(info.dataAttributes)}`);
       }

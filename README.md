@@ -39,13 +39,19 @@ show the field's real, authoritative definition.
   behavior.
 - **Shadow DOM UI** — the inspector panel renders inside an isolated
   Shadow DOM tree, so host-page CSS can't distort it and the panel's CSS
-  can never leak onto the page.
-- **Odoo Developer Mode** — when the clicked field belongs to an Odoo form
-  or wizard, the panel leads with a live **Odoo Field Definition** section:
-  the model, the field's real ORM type/relation/required/readonly/stored/
-  related/computed/help text straight from `ir.model.fields`, decoded
-  selection options, and a ready-to-paste `<field name="..."/>` view XML
-  snippet. See [Odoo Developer Mode](#odoo-developer-mode) below.
+  can never leak onto the page. It follows your system's light/dark theme.
+- **List view data cells** — click a plain table cell, not just its column
+  header, to see its row/column position, text, and (on Odoo pages) the
+  same live field lookup as a form field.
+- **Odoo Developer Mode** (its own toggle in the popup) — when the clicked
+  field belongs to an Odoo form, list, or wizard, the panel leads with a
+  live **Odoo Field Definition** section: the model, the field's real ORM
+  type/relation/required/readonly/stored/related/computed/help text
+  straight from `ir.model.fields`, how it's actually declared in the
+  current view (`widget=`, `domain=`, `context=`, `invisible=`, etc.),
+  decoded selection options, a direct link to the field's own admin
+  record, and a ready-to-paste `<field name="..."/>` view XML snippet.
+  See [Odoo Developer Mode](#odoo-developer-mode) below.
 
 ## Project Structure
 
@@ -191,9 +197,12 @@ through untouched.
 
 ## Odoo Developer Mode
 
-When the clicked field lives inside an Odoo form, list, or **wizard**
-(dialog), the panel adds a live **Odoo Field Definition** section sourced
-straight from the Odoo server, instead of guessing from CSS classes alone:
+When the clicked field lives inside an Odoo form, list, **wizard**
+(dialog), or table cell, the panel adds a live **Odoo Field Definition**
+section sourced straight from the Odoo server, instead of guessing from CSS
+classes alone. It has its own toggle in the popup ("Odoo Developer Mode"),
+separate from the general Enable Inspector switch — turn it off and every
+Odoo-specific lookup below is skipped entirely, with no network activity.
 
 - **Model detection** (`content/odoo.js`): a content script's isolated
   world can't read the page's own JS state, and the URL doesn't help
@@ -206,23 +215,41 @@ straight from the Odoo server, instead of guessing from CSS classes alone:
   ignored so they can't hijack the detected model.
 - **Field lookup**: an `ir.model.fields.search_read` call
   (`{model, name} → field_description, ttype, relation, required,
-  readonly, store, related, compute, help, selection, states`) resolved
-  against that model + the field's technical name (read off Odoo's own
-  `.o_field_widget[name="..."]` wrapper). Results are cached per
-  (model, field) for the life of the page.
+  readonly, store, related, compute, help, selection`) resolved against
+  that model + the field's technical name (read off Odoo's own
+  `.o_field_widget[name="..."]` wrapper, or a list view's `<td name="...">`
+  / `<th data-name="...">`). Results are cached per (model, field) for the
+  life of the page. A direct **"Open in Odoo"** link to the field's own
+  `ir.model.fields` record (Settings → Technical → Fields) is included.
+- **Declared-in-this-view attributes**: a second, independent lookup
+  (`get_views` on the model, fetching its default form arch) finds how the
+  field is actually declared in that view — `widget=`, `domain=`,
+  `context=`, `invisible=`, `required=`, `readonly=`, `options=`, `groups=`
+  — the overrides `ir.model.fields` alone can't show, since that's only the
+  model-level definition. When a field appears more than once in the arch
+  (e.g. it's also a column in an embedded one2many sub-view), the
+  least-nested match is preferred, since a deeply-nested one is more
+  likely to belong to the sub-view than the field actually clicked.
 - **Non-blocking**: the panel opens instantly with everything derivable
-  from the DOM; the Odoo section shows a "Looking up…" state and is filled
-  in when the network response lands. Clicking a different field while a
-  lookup is still in flight invalidates it (`ui.beginOdooLookup`/
-  `applyOdooFieldMeta` token check) so a slow, stale response can never
-  overwrite whatever field you're looking at by the time it arrives.
+  from the DOM; each Odoo sub-section shows its own "Looking up…" state
+  and fills in independently as its network response lands. Clicking a
+  different field while a lookup is still in flight invalidates it
+  (`ui.beginOdooLookup`/`applyOdooFieldMeta`/`applyOdooViewAttrs` token
+  check) so a slow, stale response can never overwrite whatever field
+  you're looking at by the time it arrives.
 - **Selection fields**: `ir.model.fields.selection` comes back from Odoo as
   a Python-literal string (e.g. `"[('draft','Draft'),('done','Done')]"`);
   it's parsed into a readable key/label list.
 - The panel also offers a ready-to-paste `<field name="..."/>` view XML
   snippet for the field.
+- **List view data cells**: clicking a plain (non-editable) table cell —
+  not just its column header — now opens a "List / Cell" panel with the
+  column name, row/column index, and the same live Odoo lookup above when
+  the cell carries a field name (Odoo's list view renders
+  `<td name="...">` directly, same pattern as everywhere else).
 - This is the one path in the extension that talks to a server — see
-  [Security & Privacy](#security--privacy).
+  [Security & Privacy](#security--privacy) — and it's the one covered by
+  its own popup toggle, off switches this whole section off.
 
 ## Installation
 
