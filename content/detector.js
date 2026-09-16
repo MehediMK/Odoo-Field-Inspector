@@ -543,13 +543,48 @@
     const seen = new Set();
     try {
       if (settings.formView) {
+        // Keep label associations inside the active wizard/page scope so a
+        // background form with the same field names cannot supply its labels.
+        const labelsByTarget = new Map();
+        scope.querySelectorAll("label[for]").forEach((label) => {
+          const target = label.getAttribute("for");
+          const text = label.textContent.replace(/\s+/g, " ").trim();
+          if (target && text) labelsByTarget.set(target, text);
+        });
+        const accessibleLabel = (el) => {
+          const ids = (el.getAttribute("aria-labelledby") || "").trim().split(/\s+/).filter(Boolean);
+          const text = ids.map((id) => {
+            const label = scope.querySelector(`#${CSS.escape(id)}`);
+            return label ? label.textContent.replace(/\s+/g, " ").trim() : "";
+          }).filter(Boolean).join(" ");
+          return text || el.getAttribute("aria-label") || "";
+        };
         scope.querySelectorAll(ODOO_FIELD_WIDGET_SELECTOR).forEach((widget) => {
           if (seen.has(widget) || !utils.isVisible(widget)) return;
           const technicalName = widget.getAttribute("name") || "";
           if (!technicalName) return;
           seen.add(widget);
           const labelEl = findOdooRowSibling(widget, LABEL_SELECTOR);
-          const label = (labelEl && labelEl.textContent.trim()) || technicalName;
+          const controls = Array.from(widget.querySelectorAll(`${FORM_CONTROL_SELECTOR}, [id]`));
+          const linkedLabel = [widget, ...controls]
+            .map((el) => labelsByTarget.get(el.id) || accessibleLabel(el))
+            .find(Boolean);
+          // Older form layouts put the label in a separate table/grid cell.
+          const cell = widget.closest("td, .o_cell");
+          const previousCell = cell && cell.previousElementSibling;
+          const siblingLabel = previousCell && previousCell.querySelector("label, .o_form_label");
+          const directLabel = widget.previousElementSibling;
+          const nearbyLabel = siblingLabel ||
+            (directLabel && directLabel.matches("label, .o_form_label") ? directLabel : null);
+          // Editable list widgets use their column heading as the display label.
+          const list = widget.closest(".o_list_table, .o_list_renderer, .o_list_view");
+          const column = list && Array.from(list.querySelectorAll(LIST_HEADER_SELECTOR)).find((header) =>
+            (header.getAttribute("data-name") || header.getAttribute("name") || header.getAttribute("data-field")) === technicalName
+          );
+          const labelText = (el) => el ? el.textContent.replace(/\s+/g, " ").trim() : "";
+          const label = linkedLabel || labelText(labelEl) || labelsByTarget.get(technicalName) ||
+            labelText(nearbyLabel) || labelText(column) ||
+            (column && (column.getAttribute("aria-label") || column.getAttribute("title"))) || technicalName;
           results.push({ kind: "form", technicalName, label, el: widget });
         });
 

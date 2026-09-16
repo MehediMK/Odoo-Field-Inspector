@@ -505,7 +505,7 @@
     }
     .fi-finder-result:hover { background: var(--fi-copy-btn-hover-bg); }
     .fi-finder-result-top { display: flex; align-items: center; gap: 6px; }
-    .fi-finder-result-label { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fi-finder-result-label { font-weight: 600; font-size: 12.5px; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
     .fi-finder-result-name {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 11px;
