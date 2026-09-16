@@ -426,7 +426,7 @@
     .fi-copy-all-btn.fi-copied { background: var(--fi-copy-all-copied-bg); }
     .fi-finder-btn {
       position: fixed;
-      left: 16px;
+      right: 16px;
       bottom: 16px;
       width: 44px;
       height: 44px;
@@ -447,7 +447,7 @@
     .fi-finder-btn:hover { background: var(--fi-copy-all-hover-bg); }
     .fi-finder-panel {
       position: fixed;
-      left: 16px;
+      right: 16px;
       bottom: 68px;
       width: 340px;
       max-width: calc(100vw - 32px);
