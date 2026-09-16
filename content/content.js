@@ -37,8 +37,19 @@
 
   // Wired once: the Field Finder (in ui.js) doesn't know about detector/odoo
   // itself, it just asks for a fresh field list on open and reports back
-  // which entry the user picked.
-  ui.onFinderOpen = () => detector.listAllFields(state.settings);
+  // which entry the user picked. When an Odoo wizard (dialog) is open, the
+  // search is automatically scoped to just that dialog's fields instead of
+  // the whole page — that's almost always what you want while a wizard is
+  // open, and it also sidesteps duplicate-label collisions between the
+  // wizard and whatever's behind it.
+  ui.onFinderOpen = () => {
+    const wizardRoot = detector.findOpenWizard();
+    return {
+      scope: wizardRoot ? "wizard" : "page",
+      scopeLabel: wizardRoot ? detector.getWizardTitle(wizardRoot) : "",
+      fields: detector.listAllFields(state.settings, wizardRoot || undefined),
+    };
+  };
   ui.onFinderSelect = (entry) => inspectElement({ kind: entry.kind, el: entry.el });
 
   function inPanel(e) {

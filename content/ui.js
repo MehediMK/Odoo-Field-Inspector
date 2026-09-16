@@ -532,7 +532,7 @@
     finderBtnEl: null,
     finderPanelEl: null,
     finderFields: [], // last-fetched full { kind, technicalName, label, el } list
-    onFinderOpen: null, // () => fields[] — set by content.js
+    onFinderOpen: null, // () => { scope: "page"|"wizard", scopeLabel, fields[] } — set by content.js
     onFinderSelect: null, // (entry) => void — set by content.js
   };
 
@@ -731,7 +731,7 @@
     finderPanel.hidden = true;
     finderPanel.innerHTML = `
       <div class="fi-finder-header">
-        <span>Field Finder</span>
+        <span class="fi-header-title"><span>Field Finder</span><span class="fi-badge" id="fi-finder-scope-badge" hidden>Wizard</span></span>
         <button type="button" class="fi-close-btn" id="fi-finder-close-btn" title="Close" aria-label="Close">×</button>
       </div>
       <div class="fi-finder-search-wrap">
@@ -857,7 +857,24 @@
 
   ui.openFinder = function () {
     ui.ensureHost();
-    ui.finderFields = typeof ui.onFinderOpen === "function" ? ui.onFinderOpen() || [] : [];
+    const result = typeof ui.onFinderOpen === "function" ? ui.onFinderOpen() : null;
+    // Back-compat: accept either the newer { scope, scopeLabel, fields } shape or a bare fields array.
+    const isScoped = result && !Array.isArray(result);
+    ui.finderFields = (isScoped ? result.fields : result) || [];
+
+    const scopeBadge = ui.finderPanelEl.querySelector("#fi-finder-scope-badge");
+    const search = ui.finderPanelEl.querySelector("#fi-finder-search");
+    if (scopeBadge) {
+      const inWizard = isScoped && result.scope === "wizard";
+      scopeBadge.hidden = !inWizard;
+      scopeBadge.classList.toggle("list", inWizard);
+      scopeBadge.textContent = inWizard && result.scopeLabel ? result.scopeLabel : "Wizard";
+    }
+    if (search) {
+      search.placeholder =
+        isScoped && result.scope === "wizard" ? "Search this wizard by label or technical name…" : "Search by label or technical name…";
+    }
+
     ui.finderPanelEl.hidden = false;
     const input = ui.finderPanelEl.querySelector("#fi-finder-search");
     renderFinderResults(input ? input.value : "");

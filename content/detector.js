@@ -507,12 +507,36 @@
   // target); this instead enumerates everything at once.
   // ---------------------------------------------------------------------
 
-  detector.listAllFields = function (settings) {
+  // Odoo (17/18, Owl-based) dialogs: `.o_dialog_container` holds one
+  // `.o_dialog` per open dialog (stacked ones get `.o_inactive_modal`); a
+  // plain Bootstrap `.modal.show` is the fallback for older/custom modals.
+  const WIZARD_SELECTOR = ".o_dialog:not(.o_inactive_modal), .modal.show";
+
+  /** Returns the current topmost open Odoo wizard/dialog root element, or null if none is open. */
+  detector.findOpenWizard = function () {
+    try {
+      const dialogs = Array.from(document.querySelectorAll(WIZARD_SELECTOR)).filter((el) => utils.isVisible(el));
+      return dialogs.length ? dialogs[dialogs.length - 1] : null;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  /** Best-effort title for a wizard root, from its Bootstrap modal header. */
+  detector.getWizardTitle = function (wizardRoot) {
+    if (!wizardRoot) return "";
+    const titleEl = wizardRoot.querySelector(".modal-title");
+    return titleEl ? titleEl.textContent.trim() : "";
+  };
+
+  /** Enumerates fields/columns under `rootEl` (defaults to the whole document — pass a wizard root to scope the search to just that dialog). */
+  detector.listAllFields = function (settings, rootEl) {
+    const scope = rootEl || document;
     const results = [];
     const seen = new Set();
     try {
       if (settings.formView) {
-        document.querySelectorAll(ODOO_FIELD_WIDGET_SELECTOR).forEach((widget) => {
+        scope.querySelectorAll(ODOO_FIELD_WIDGET_SELECTOR).forEach((widget) => {
           if (seen.has(widget) || !utils.isVisible(widget)) return;
           const technicalName = widget.getAttribute("name") || "";
           if (!technicalName) return;
@@ -523,7 +547,7 @@
         });
 
         // Plain (non-Odoo) form controls with a name/id but no .o_field_widget wrapper.
-        document.querySelectorAll(FORM_CONTROL_SELECTOR).forEach((ctrl) => {
+        scope.querySelectorAll(FORM_CONTROL_SELECTOR).forEach((ctrl) => {
           if (seen.has(ctrl) || !utils.isVisible(ctrl) || ctrl.closest(ODOO_FIELD_WIDGET_SELECTOR)) return;
           const technicalName = ctrl.getAttribute("name") || ctrl.id || "";
           if (!technicalName) return;
@@ -534,7 +558,7 @@
       }
 
       if (settings.listView) {
-        document.querySelectorAll(LIST_HEADER_SELECTOR).forEach((th) => {
+        scope.querySelectorAll(LIST_HEADER_SELECTOR).forEach((th) => {
           if (seen.has(th) || !utils.isVisible(th)) return;
           const technicalName = th.getAttribute("data-name") || th.getAttribute("name") || th.getAttribute("data-field") || "";
           const label = th.textContent.trim() || th.getAttribute("aria-label") || th.getAttribute("title") || "";
