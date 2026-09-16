@@ -667,8 +667,7 @@
 
   detector.startObserving = function (settings) {
     detector.stopObserving();
-    const rerun = utils.debounce(() => detector.applyHighlights(settings), 300);
-    observer = new MutationObserver((mutations) => {
+    const activeObserver = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.addedNodes.length || m.removedNodes.length) {
           rerun();
@@ -676,6 +675,10 @@
         }
       }
     });
+    const rerun = utils.debounce(() => {
+      if (observer === activeObserver) detector.applyHighlights(settings);
+    }, 300);
+    observer = activeObserver;
     observer.observe(document.body, { childList: true, subtree: true });
   };
 

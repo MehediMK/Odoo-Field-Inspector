@@ -442,6 +442,12 @@
       justify-content: center;
       z-index: 2147483647;
     }
+    .fi-options-btn { width: auto; padding: 0 14px; border-radius: 22px; gap: 7px; font: 600 13px system-ui, sans-serif; }
+    .fi-options-actions { padding: 6px; overflow-y: auto; }
+    .fi-option { display: block; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+    .fi-option:hover, .fi-option:focus-visible { background: var(--fi-copy-btn-hover-bg); }
+    .fi-option:disabled { opacity: .45; cursor: default; }
+    .fi-option small { display: block; color: var(--fi-hint-fg); margin-top: 3px; overflow-wrap: anywhere; }
     .fi-finder-btn[hidden] { display: none; }
     .fi-finder-btn svg { width: 20px; height: 20px; }
     .fi-finder-btn:hover { background: var(--fi-copy-all-hover-bg); }
@@ -529,6 +535,9 @@
     activeTab: 0,
     history: [], // { label, info, el } — most recent last
     historyPos: -1, // index into history currently on screen
+    optionsPanelEl: null,
+    onOptionSetting: null,
+    onDisable: null,
     finderBtnEl: null,
     finderPanelEl: null,
     finderFields: [], // last-fetched full { kind, technicalName, label, el } list
@@ -720,11 +729,38 @@
 
     const finderBtn = document.createElement("button");
     finderBtn.type = "button";
-    finderBtn.className = "fi-finder-btn";
-    finderBtn.title = "Search fields (label or technical name)";
+    finderBtn.className = "fi-finder-btn fi-options-btn";
+    finderBtn.title = "Inspector options";
+    finderBtn.setAttribute("aria-expanded", "false");
+    finderBtn.setAttribute("aria-controls", "fi-options-panel");
     finderBtn.hidden = true;
-    finderBtn.innerHTML = ICONS.search;
+    finderBtn.textContent = "⚙ Options";
     shadow.appendChild(finderBtn);
+
+    const optionsPanel = document.createElement("div");
+    optionsPanel.id = "fi-options-panel";
+    optionsPanel.className = "fi-finder-panel";
+    optionsPanel.hidden = true;
+    optionsPanel.setAttribute("role", "region");
+    optionsPanel.setAttribute("aria-label", "Inspector options");
+    shadow.appendChild(optionsPanel);
+    optionsPanel.addEventListener("click", (e) => {
+      const button = e.target.closest("[data-option]");
+      if (!button || button.disabled) return;
+      const action = button.dataset.option;
+      if (action === "recent") { ui.openOptions(true); return; }
+      if (action === "back") { ui.openOptions(); return; }
+      ui.closeOptions(true);
+      if (action === "search") ui.openFinder();
+      else if (action === "history") {
+        const index = Number(button.dataset.index);
+        const entry = ui.history[index];
+        if (entry) ui.showPanel(entry.info, ui.settingsRef, entry.el, { fromHistory: true, historyIndex: index });
+      } else if (action === "highlight" || action === "odooMode") {
+        if (ui.onOptionSetting) ui.onOptionSetting(action, !ui.settingsRef[action]);
+      } else if (action === "copy") ui.copyAll(ui.panelEl.querySelector("#fi-copy-all-btn"));
+      else if (action === "disable" && ui.onDisable) ui.onDisable();
+    });
 
     const finderPanel = document.createElement("div");
     finderPanel.className = "fi-finder-panel";
@@ -747,11 +783,12 @@
     panel.querySelector("#fi-jump-btn").addEventListener("click", () => ui.jumpToElement());
     makeDraggable(panel, panel.querySelector(".fi-header"));
 
-    finderBtn.addEventListener("click", () => (ui.isFinderOpen() ? ui.closeFinder() : ui.openFinder()));
+    finderBtn.addEventListener("click", () => (ui.isOptionsOpen() ? ui.closeOptions() : ui.openOptions()));
     finderPanel.querySelector("#fi-finder-close-btn").addEventListener("click", () => ui.closeFinder());
     finderPanel.querySelector("#fi-finder-search").addEventListener("input", (e) => renderFinderResults(e.target.value));
 
     shadow.addEventListener("click", (e) => {
+      if (!optionsPanel.contains(e.target) && !finderBtn.contains(e.target)) ui.closeOptions();
       const finderResult = e.target.closest(".fi-finder-result");
       if (finderResult) {
         const idx = Number(finderResult.getAttribute("data-idx"));
@@ -792,6 +829,7 @@
     ui.shadowRoot = shadow;
     ui.panelEl = panel;
     ui.bodyEl = panel.querySelector("#fi-body");
+    ui.optionsPanelEl = optionsPanel;
     ui.finderBtnEl = finderBtn;
     ui.finderPanelEl = finderPanel;
   };
@@ -842,12 +880,46 @@
       .join("");
   }
 
+  ui.isOptionsOpen = function () {
+    return !!(ui.optionsPanelEl && !ui.optionsPanelEl.hidden);
+  };
+
+  ui.closeOptions = function (restoreFocus = false) {
+    if (ui.optionsPanelEl) ui.optionsPanelEl.hidden = true;
+    if (ui.finderBtnEl) {
+      ui.finderBtnEl.setAttribute("aria-expanded", "false");
+      if (restoreFocus && !ui.finderBtnEl.hidden) ui.finderBtnEl.focus();
+    }
+  };
+
+  ui.openOptions = function (recent = false) {
+    ui.ensureHost();
+    if (ui.finderBtnEl.hidden) return;
+    ui.closeFinder();
+    const items = recent
+      ? `<button type="button" class="fi-option" data-option="back">← All options</button>` +
+        ui.history.map((entry, index) => ({ entry, index })).reverse().map(({ entry, index }) =>
+          `<button type="button" class="fi-option" data-option="history" data-index="${index}">${escapeHtml(entry.label)}<small>${escapeHtml(entry.info.odooFieldName || entry.info.nameAttr || "")}</small></button>`
+        ).join("")
+      : `<button type="button" class="fi-option" data-option="search">Search Fields</button>
+        <button type="button" class="fi-option" data-option="recent" ${ui.history.length ? "" : "disabled"}>Recent Fields</button>
+        <button type="button" class="fi-option" data-option="highlight" aria-pressed="${!!ui.settingsRef.highlight}">Highlight Fields · ${ui.settingsRef.highlight ? "On" : "Off"}</button>
+        <button type="button" class="fi-option" data-option="odooMode" aria-pressed="${!!ui.settingsRef.odooMode}">Odoo Developer Mode · ${ui.settingsRef.odooMode ? "On" : "Off"}</button>
+        <button type="button" class="fi-option" data-option="copy" ${ui.lastInfo ? "" : "disabled"}>Copy Current Field</button>
+        <button type="button" class="fi-option" data-option="disable">Disable Inspector</button>`;
+    ui.optionsPanelEl.innerHTML = `<div class="fi-finder-header">${recent ? "Recent Fields" : "Inspector Options"}</div><div class="fi-options-actions">${items}</div>`;
+    ui.optionsPanelEl.hidden = false;
+    ui.finderBtnEl.setAttribute("aria-expanded", "true");
+    ui.optionsPanelEl.querySelector("button:not(:disabled)")?.focus();
+  };
+
   ui.showFinderButton = function () {
     ui.ensureHost();
     if (ui.finderBtnEl) ui.finderBtnEl.hidden = false;
   };
 
   ui.hideFinderButton = function () {
+    ui.closeOptions();
     if (ui.finderBtnEl) ui.finderBtnEl.hidden = true;
   };
 
@@ -857,6 +929,7 @@
 
   ui.openFinder = function () {
     ui.ensureHost();
+    ui.closeOptions();
     const result = typeof ui.onFinderOpen === "function" ? ui.onFinderOpen() : null;
     // Back-compat: accept either the newer { scope, scopeLabel, fields } shape or a bare fields array.
     const isScoped = result && !Array.isArray(result);
@@ -1375,6 +1448,7 @@
     ui.lastElement = null;
     ui.history = [];
     ui.historyPos = -1;
+    ui.optionsPanelEl = null;
     ui.finderBtnEl = null;
     ui.finderPanelEl = null;
     ui.finderFields = [];

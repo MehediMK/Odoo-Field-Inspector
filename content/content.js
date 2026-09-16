@@ -52,6 +52,14 @@
   };
   ui.onFinderSelect = (entry) => inspectElement({ kind: entry.kind, el: entry.el });
 
+  ui.onDisable = () => disable();
+  ui.onOptionSetting = (key, value) => {
+    updateSettings({ [key]: value });
+    chrome.storage.local.set({ fiSettings: state.settings }).catch((err) => {
+      console.error("[Field Inspector] could not save settings:", err);
+    });
+  };
+
   function inPanel(e) {
     const path = typeof e.composedPath === "function" ? e.composedPath() : [];
     return !!(ui.hostEl && path.includes(ui.hostEl));
@@ -115,6 +123,7 @@
     try {
       if (!state.enabled) return;
       if (inPanel(e)) return; // let the panel's own listeners handle internal clicks
+      ui.closeOptions();
 
       const resolved = detector.resolveInspectable(e.target, state.settings);
       if (!resolved) {
@@ -157,7 +166,11 @@
 
   function onKeyDown(e) {
     if (e.key !== "Escape") return;
-    if (ui.isFinderOpen && ui.isFinderOpen()) {
+    if (ui.isOptionsOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      ui.closeOptions(true);
+    } else if (ui.isFinderOpen && ui.isFinderOpen()) {
       ui.closeFinder();
     } else if (ui.isPanelOpen()) {
       ui.closePanel();
@@ -196,6 +209,7 @@
     detector.applyHighlights(state.settings);
     detector.startObserving(state.settings);
     ui.ensureHost();
+    ui.settingsRef = state.settings;
     ui.showFinderButton();
     notifyBackground(true);
   }
@@ -218,8 +232,18 @@
 
   function updateSettings(newSettings) {
     state.settings = { ...state.settings, ...(newSettings || {}) };
+    ui.settingsRef = state.settings;
     if (state.enabled) {
       detector.applyHighlights(state.settings);
+      detector.startObserving(state.settings);
+      if (!state.settings.highlight && lastHoverEl) {
+        detector.setHover(lastHoverEl, false);
+        lastHoverEl = null;
+      }
+      if (ui.isOptionsOpen()) ui.openOptions();
+      if (ui.lastInfo && ui.lastElement && newSettings && "odooMode" in newSettings) {
+        inspectElement({ kind: ui.lastInfo.kind, el: ui.lastElement });
+      }
     }
   }
 
