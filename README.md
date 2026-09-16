@@ -95,15 +95,25 @@ chrome-field-inspector/
 ├── icons/
 │   ├── icon16.png / icon32.png / icon48.png / icon128.png
 │   └── icon.svg            # Vector source for the icons above (dev-only)
+├── docs/                   # GitHub Pages site: landing page + hosted privacy policy
+│   ├── index.html            # SEO landing page (Open Graph, JSON-LD, screenshots)
+│   ├── privacy.html          # Rendered copy of PRIVACY_POLICY.md, for a stable public URL
+│   ├── sitemap.xml / robots.txt
+│   └── assets/                # Images used only by the pages above
 ├── README.md
 ├── PRIVACY_POLICY.md       # Full privacy policy (dev-only, see below)
 └── STORE_LISTING.md        # Chrome Web Store submission copy (dev-only)
 ```
 
 `README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `icons/icon.svg`,
-and `promo/` (screenshot sources) are documentation/dev assets — none of
-them are referenced by `manifest.json`, so none of them are included in
-the packaged `.zip` uploaded to the Chrome Web Store.
+`docs/`, and `promo/` (screenshot sources) are documentation/dev assets —
+none of them are referenced by `manifest.json`, so none of them are
+included in the packaged `.zip` uploaded to the Chrome Web Store.
+`docs/` is served separately, as a GitHub Pages site (see
+[`STORE_LISTING.md`](STORE_LISTING.md) for the exact steps to enable it) —
+it's the extension's public landing page and the hosted URL for its
+privacy policy, not something a Chrome user ever loads as part of the
+extension itself.
 
 ## Architecture
 

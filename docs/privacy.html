@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — Odoo Field Inspector</title>
+<meta name="description" content="Privacy policy for the Odoo Field Inspector Chrome extension: what data it reads, what it sends (only to your own Odoo server, only with Odoo Developer Mode on), and what it never collects." />
+<link rel="canonical" href="https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html" />
+<link rel="icon" type="image/png" href="assets/icon128.png" />
+<meta name="robots" content="index, follow" />
+
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e14;
+    --bg-panel: #14161f;
+    --fg: #f5f3ff;
+    --fg-muted: #a1a8bb;
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --border: #262b3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 60px; }
+  a { color: var(--accent-2); }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  .eyebrow a { color: var(--fg-muted); font-size: 14px; text-decoration: none; }
+  .eyebrow a:hover { color: var(--accent-2); }
+  .effective { color: var(--fg-muted); font-size: 14px; margin: 10px 0 32px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; color: var(--fg); }
+  p, li { color: #d7d9e6; font-size: 15px; }
+  code { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-panel); color: var(--fg-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  ul { padding-left: 20px; }
+  .summary-box {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin: 20px 0 8px;
+  }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--fg-muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow"><a href="index.html">&larr; Odoo Field Inspector</a></p>
+  <h1>Privacy Policy</h1>
+  <p class="effective">Effective date: 2026-09-16</p>
+
+  <p>This policy covers the "Odoo Field Inspector" Chrome extension ("the extension", "Field Inspector"). It's written to be read on its own — you don't need to read the source code to know what this extension does with your data, though the code is open for inspection in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>.</p>
+
+  <div class="summary-box">
+    <h2 style="margin-top:0;">Summary</h2>
+    <ul>
+      <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and we have no analytics, telemetry, or crash-reporting of any kind.</li>
+      <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name only</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
+      <li>Your only stored data is your own preference settings, kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
+    </ul>
+  </div>
+
+  <h2>What the extension does</h2>
+  <p>Field Inspector lets you click a form field or a table/list column on any web page to see a read-only developer panel with its HTML details: element type, attributes, a CSS selector, an XPath, and — on pages served by an Odoo instance — the field's real definition from that Odoo server's own database. It's a developer/inspection tool; it never submits forms, never edits page content, and never changes a field's value, checked state, or focus.</p>
+
+  <h2>Data we collect</h2>
+  <p><strong>None.</strong> We (the developer) do not operate a backend, collect analytics, or receive any data from installs of this extension. There is no telemetry, no crash reporting, no usage tracking, and no advertising in this extension.</p>
+
+  <h2>Data the extension reads, and where it goes</h2>
+  <table>
+    <thead><tr><th>Data</th><th>When</th><th>Sent to</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>The clicked field's/column's HTML (tag, attributes, classes, id, current value, etc.)</td>
+        <td>Whenever you click a detected field while the inspector is enabled</td>
+        <td><strong>Nowhere</strong> — rendered entirely inside the extension's own on-page panel, in your browser</td>
+        <td>Show you the field's structure</td>
+      </tr>
+      <tr>
+        <td>A field's technical model + field name (e.g. <code>res.partner.email</code>)</td>
+        <td>Only when Odoo Developer Mode is on <em>and</em> the clicked field is recognized as an Odoo field</td>
+        <td>The <strong>same Odoo server</strong> the current page is already loaded from, over that page's existing logged-in session</td>
+        <td>Fetch the field's real <code>ir.model.fields</code> definition and how it's declared in the current view</td>
+      </tr>
+      <tr>
+        <td>Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off)</td>
+        <td>Whenever you change a setting in the popup</td>
+        <td><strong>Nowhere</strong> — saved only to <code>chrome.storage.local</code>, local to your browser profile</td>
+        <td>Remember your preferences between sessions</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>No field <em>values</em> are ever included in the Odoo lookup — only the technical field name and the model name. No page content, browsing history, or personal information is ever transmitted by this extension, to us or to anyone else, under any setting.</p>
+
+  <h2>Permissions and why we need them</h2>
+  <table>
+    <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>activeTab</code></td><td>Lets the extension act on the current tab only after you explicitly click the toolbar icon and turn the inspector on — not automatically on every site.</td></tr>
+      <tr><td><code>scripting</code></td><td>Lets the extension inject its inspector code into the tab you've enabled it on, on demand.</td></tr>
+      <tr><td><code>storage</code></td><td>Lets the extension save your preference settings locally via <code>chrome.storage.local</code>, so they persist between browser sessions.</td></tr>
+    </tbody>
+  </table>
+  <p>The extension requests <strong>no host permissions</strong> — Chrome does not show the broad "read and change all your data on all websites" warning for this extension, because it cannot run on any site until you explicitly enable it there.</p>
+
+  <h2>Data retention</h2>
+  <ul>
+    <li>Your preference settings persist in <code>chrome.storage.local</code> until you change them again or remove the extension (removing the extension clears this storage, per Chrome's standard behavior).</li>
+    <li>Odoo field-definition lookups are cached only in memory, only for the life of the current browser tab — closing or navigating the tab away clears that cache. Nothing is written to disk beyond your preference settings above.</li>
+  </ul>
+
+  <h2>Third parties</h2>
+  <p>We do not share, sell, or transfer any data to third parties, because we do not collect any data in the first place. The only outbound network request this extension ever makes is the Odoo field-lookup call described above, and that request goes directly from your browser to the Odoo server the current page is already on — never to us, and never to any third-party analytics, advertising, or data-broker service.</p>
+
+  <h2>Children's privacy</h2>
+  <p>This extension is a developer tool and is not directed at children. It does not knowingly collect any information from anyone, including children under 13.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, the updated version will be published at this same URL, with an updated effective date above. Material changes (e.g. a new feature that sends data somewhere new) will also be called out in the project's README and in the Chrome Web Store listing's description at the time of that update.</p>
+
+  <h2>Open source</h2>
+  <p>This extension's full source code is included in its <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a> — the description above is not a claim you have to take on faith; you can read exactly what each content script does.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy or the extension's data practices can be opened as an <a href="https://github.com/MehediMK/Odoo-Field-Inspector/issues">issue on GitHub</a>.</p>
+
+  <footer>
+    <a href="index.html">&larr; Back to Odoo Field Inspector</a>
+  </footer>
+</div>
+</body>
+</html>

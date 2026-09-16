@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Odoo Field Inspector — Chrome Extension for CSS Selector, XPath &amp; Technical Field Name</title>
+<meta name="description" content="Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition. Free Chrome extension." />
+<link rel="canonical" href="https://mehedimk.github.io/Odoo-Field-Inspector/" />
+<link rel="icon" type="image/png" href="assets/icon128.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Odoo Field Inspector" />
+<meta property="og:title" content="Odoo Field Inspector — CSS Selector, XPath &amp; Technical Field Name for Odoo" />
+<meta property="og:description" content="Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition." />
+<meta property="og:url" content="https://mehedimk.github.io/Odoo-Field-Inspector/" />
+<meta property="og:image" content="https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Odoo Field Inspector — CSS Selector, XPath &amp; Technical Field Name for Odoo" />
+<meta name="twitter:description" content="Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition." />
+<meta name="twitter:image" content="https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Odoo Field Inspector",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Chrome",
+  "description": "Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition, right on the page.",
+  "url": "https://mehedimk.github.io/Odoo-Field-Inspector/",
+  "image": "https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "MehediMK"
+  }
+}
+</script>
+
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e14;
+    --bg-panel: #14161f;
+    --fg: #f5f3ff;
+    --fg-muted: #a1a8bb;
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --border: #262b3a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  }
+  img { max-width: 100%; display: block; }
+  a { color: var(--accent-2); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  header.hero {
+    background: radial-gradient(circle at 80% -10%, rgba(167,139,250,0.22) 0%, rgba(167,139,250,0) 55%), var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 0 48px;
+  }
+  .hero-inner { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+  .hero-icon { width: 96px; height: 96px; flex: 0 0 auto; border-radius: 22px; }
+  .hero-text { flex: 1 1 320px; min-width: 0; }
+  .eyebrow {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-muted); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.12; margin: 0 0 14px; }
+  h1 .accent { color: var(--accent-2); }
+  .tagline { font-size: 18px; color: var(--fg-muted); margin: 0 0 22px; max-width: 640px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 11px 20px; border-radius: 8px; font-weight: 700; font-size: 14.5px;
+    text-decoration: none; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: #1a1030; }
+  .btn-primary:hover { background: var(--accent-2); }
+  .btn-secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent-2); }
+
+  section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  h2 { font-size: 26px; margin: 0 0 8px; }
+  .section-sub { color: var(--fg-muted); margin: 0 0 28px; max-width: 680px; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .feature-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .feature-card h3 { margin: 0 0 8px; font-size: 16px; color: var(--fg); }
+  .feature-card p { margin: 0; color: var(--fg-muted); font-size: 14px; }
+
+  .shot { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+  .shot img { width: 100%; }
+  .shot-caption { padding: 12px 16px; font-size: 13.5px; color: var(--fg-muted); background: var(--bg-panel); }
+
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .chip {
+    font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+    background: rgba(167,139,250,0.14); color: var(--accent-2); border: 1px solid rgba(167,139,250,0.28);
+  }
+
+  .steps { padding-left: 20px; }
+  .steps li { margin-bottom: 10px; color: var(--fg-muted); }
+  .steps li strong { color: var(--fg); }
+
+  footer { padding: 32px 0 48px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--fg-muted); font-size: 13.5px; }
+  footer a { color: var(--fg-muted); }
+  footer a:hover { color: var(--accent-2); }
+
+  @media (max-width: 480px) {
+    .hero-inner { flex-direction: column; align-items: flex-start; }
+    .cta-row { width: 100%; }
+    .btn { flex: 1 1 auto; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <img class="hero-icon" src="assets/icon128.png" alt="Odoo Field Inspector icon — a magnifying glass" width="96" height="96" />
+    <div class="hero-text">
+      <p class="eyebrow">Chrome Extension · Developer Tools</p>
+      <h1>Odoo Field Inspector — find any field's <span class="accent">technical name, CSS selector &amp; XPath</span></h1>
+      <p class="tagline">Click a form field's label or a table's column header — on an Odoo page or any website — and a developer-tool style panel shows you everything about it, including a live lookup straight from <code>ir.model.fields</code> on Odoo pages.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/MehediMK/Odoo-Field-Inspector">Get it on GitHub</a>
+        <a class="btn btn-secondary" href="privacy.html">Privacy Policy</a>
+      </div>
+      <div class="chip-row">
+        <span class="chip">CSS Selector</span>
+        <span class="chip">XPath</span>
+        <span class="chip">Technical Field Name</span>
+        <span class="chip">ir.model.fields</span>
+        <span class="chip">Field Finder</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Everything a field's HTML — and, on Odoo, its real definition</h2>
+    <p class="section-sub">One click swaps guessing at CSS classes and opening Odoo's Technical Settings for an instant, accurate answer.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Live Odoo field definitions</h3>
+        <p>Model, ORM type, relation, required/readonly/stored state, help text, and how the field is actually declared in the current view — straight from your Odoo server's own <code>ir.model.fields</code>.</p>
+      </div>
+      <div class="feature-card">
+        <h3>CSS selector &amp; XPath, always unique</h3>
+        <p>Generates the shortest selector and XPath that still uniquely resolve back to the exact element — ready to paste into a test script or view XML.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Field Finder, page-wide search</h3>
+        <p>Search every field and list column on the page by label or technical name, live as you type. Open inside an Odoo wizard and it automatically scopes to just that dialog.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Form fields and list/table columns</h3>
+        <p>Works on standard HTML forms and tables too, not just Odoo — labels, inputs, selects, textareas, ARIA-labelled custom controls, and <code>&lt;th&gt;</code>/grid columns.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Never touches your data</h3>
+        <p>Clicks on detected fields are intercepted before the page sees them — no checkbox ever toggles, no dropdown ever opens, no value ever changes.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Nothing leaves your browser</h3>
+        <p>Except one explicit, toggleable exception: the Odoo field lookup, which asks the same Odoo server you're already logged into — never a third-party server. See the <a href="privacy.html">privacy policy</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshots">
+  <div class="wrap">
+    <h2>See it in action</h2>
+    <p class="section-sub">Screenshots from the actual extension — not mockups.</p>
+
+    <div class="shot">
+      <img src="assets/screenshot_1_panel.jpg" alt="Odoo Field Inspector panel open on a Country field, showing its model, ORM type, relation, and the Declared In Current View table" width="1280" height="800" />
+      <div class="shot-caption">The inspector panel's Odoo Field tab: model, type, relation, view-level attributes, and a direct link to the field's own admin record.</div>
+    </div>
+
+    <div class="shot">
+      <img src="assets/screenshot_2_finder.jpg" alt="Field Finder search panel listing every detected form field and list column with its technical name" width="1280" height="800" />
+      <div class="shot-caption">Field Finder: every field and column on the page, searchable by label or technical name.</div>
+    </div>
+
+    <div class="shot">
+      <img src="assets/screenshot_3_popup.jpg" alt="Extension popup showing the Enable Inspector toggle and Odoo Developer Mode setting" width="1280" height="800" />
+      <div class="shot-caption">The popup: turn the inspector on, choose detection modes, and toggle Odoo Developer Mode.</div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <ol class="steps">
+      <li><strong>Clone or download</strong> this repository.</li>
+      <li>Open <strong>chrome://extensions</strong> in Chrome.</li>
+      <li>Turn on <strong>Developer mode</strong> (top-right toggle).</li>
+      <li>Click <strong>Load unpacked</strong> and select the extension's folder.</li>
+      <li>Pin the extension, open any form or table, and click <strong>Enable Inspector</strong> in the popup.</li>
+    </ol>
+    <p class="section-sub">Full setup, architecture notes, and a manual testing checklist are in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector#readme">project README</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; 2026 Odoo Field Inspector. Not affiliated with or endorsed by Odoo S.A.</span>
+    <span>
+      <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="privacy.html">Privacy Policy</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

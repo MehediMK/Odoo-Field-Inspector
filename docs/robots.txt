@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mehedimk.github.io/Odoo-Field-Inspector/sitemap.xml
