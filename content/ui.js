@@ -48,9 +48,7 @@
       --fi-copied-fg: #166534;
       --fi-preview-bg: #0f172a;
       --fi-preview-fg: #e2e8f0;
-      --fi-attr-bg: #f8fafc;
       --fi-attr-key: #7c3aed;
-      --fi-attr-val: #0f172a;
       --fi-hint-fg: #94a3b8;
       --fi-footer-bg: #f8fafc;
       --fi-footer-border: #e5e7eb;
@@ -59,6 +57,22 @@
       --fi-copy-all-hover-bg: #1f2937;
       --fi-copy-all-copied-bg: #16a34a;
       --fi-link: #2563eb;
+      --fi-table-stripe-bg: rgba(15, 23, 42, 0.028);
+      --fi-table-header-bg: rgba(15, 23, 42, 0.035);
+      --fi-tab-active: #714b67;
+      --fi-required-dot: #ef4444;
+      --fi-chip-blue-bg: #dbeafe;
+      --fi-chip-blue-fg: #1d4ed8;
+      --fi-chip-purple-bg: #ede9fe;
+      --fi-chip-purple-fg: #6d28d9;
+      --fi-chip-green-bg: #dcfce7;
+      --fi-chip-green-fg: #166534;
+      --fi-chip-orange-bg: #ffedd5;
+      --fi-chip-orange-fg: #c2410c;
+      --fi-chip-teal-bg: #ccfbf1;
+      --fi-chip-teal-fg: #0f766e;
+      --fi-chip-pink-bg: #fce7f3;
+      --fi-chip-pink-fg: #be185d;
     }
     @media (prefers-color-scheme: dark) {
       :host {
@@ -95,9 +109,7 @@
         --fi-copied-fg: #5fd88a;
         --fi-preview-bg: #0b0e14;
         --fi-preview-fg: #d7dbe4;
-        --fi-attr-bg: #20242e;
         --fi-attr-key: #b79bf5;
-        --fi-attr-val: #dbe1ee;
         --fi-hint-fg: #6b7385;
         --fi-footer-bg: #171a22;
         --fi-footer-border: #2c313d;
@@ -106,6 +118,22 @@
         --fi-copy-all-hover-bg: #4a80f0;
         --fi-copy-all-copied-bg: #1f9d55;
         --fi-link: #7fa1f5;
+        --fi-table-stripe-bg: rgba(255, 255, 255, 0.032);
+        --fi-table-header-bg: rgba(255, 255, 255, 0.045);
+        --fi-tab-active: #d4a6c8;
+        --fi-required-dot: #f87171;
+        --fi-chip-blue-bg: #1e3a5f;
+        --fi-chip-blue-fg: #93c5fd;
+        --fi-chip-purple-bg: #3b2f5e;
+        --fi-chip-purple-fg: #c4b5fd;
+        --fi-chip-green-bg: #163a24;
+        --fi-chip-green-fg: #5fd88a;
+        --fi-chip-orange-bg: #4a2c12;
+        --fi-chip-orange-fg: #fdba74;
+        --fi-chip-teal-bg: #0f3d38;
+        --fi-chip-teal-fg: #5eead4;
+        --fi-chip-pink-bg: #4a1942;
+        --fi-chip-pink-fg: #f0abfc;
       }
     }
     * { box-sizing: border-box; }
@@ -148,7 +176,10 @@
       background: var(--fi-header-bg);
       color: var(--fi-header-fg);
       flex: 0 0 auto;
+      cursor: grab;
+      user-select: none;
     }
+    .fi-header.fi-dragging { cursor: grabbing; }
     .fi-header-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
     .fi-badge {
       font-size: 10px;
@@ -161,6 +192,30 @@
       color: white;
     }
     .fi-badge.list { background: var(--fi-badge-list-bg); }
+    .fi-required-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--fi-required-dot);
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+      flex: 0 0 auto;
+    }
+    .fi-required-dot[hidden] { display: none; }
+    .fi-header-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+    .fi-icon-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--fi-close-fg);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .fi-icon-btn svg { width: 15px; height: 15px; display: block; }
+    .fi-icon-btn:hover { background: var(--fi-close-hover-bg); color: var(--fi-close-hover-fg); }
     .fi-close-btn {
       appearance: none;
       border: none;
@@ -173,21 +228,118 @@
       border-radius: 6px;
     }
     .fi-close-btn:hover { background: var(--fi-close-hover-bg); color: var(--fi-close-hover-fg); }
-    .fi-body { overflow-y: auto; padding: 10px 14px 14px; flex: 1 1 auto; }
-    .fi-section { margin-top: 14px; }
-    .fi-section:first-child { margin-top: 4px; }
-    .fi-section-title {
-      font-size: 11px;
+    .fi-history {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--fi-section-border);
+      background: var(--fi-footer-bg);
+    }
+    .fi-history[hidden] { display: none; }
+    .fi-history-item {
+      appearance: none;
+      border: 1px solid var(--fi-copy-btn-border);
+      background: var(--fi-copy-btn-bg);
+      color: var(--fi-copy-btn-fg);
+      font-size: 10.5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+      cursor: pointer;
+      flex: 0 0 auto;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fi-history-item:hover { background: var(--fi-copy-btn-hover-bg); }
+    .fi-history-item.current { background: var(--fi-tab-active); border-color: var(--fi-tab-active); color: #fff; }
+    .fi-body { overflow: hidden; padding: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+    /* Styled after Odoo's own form-view notebook tabs: flat text tabs on the
+       page background with a colored underline on the active one, rather
+       than filled pill buttons — so the panel reads like an Odoo page. */
+    .fi-tabs {
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 4px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--fi-section-border);
+      scrollbar-width: thin;
+    }
+    .fi-tabs::-webkit-scrollbar { height: 4px; }
+    .fi-tabs::-webkit-scrollbar-track { background: transparent; }
+    .fi-tabs::-webkit-scrollbar-thumb { background: var(--fi-section-border); border-radius: 4px; }
+    .fi-tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--fi-section-title-fg);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 9px;
+      margin-bottom: -1px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+    .fi-tab-icon { display: inline-flex; width: 14px; height: 14px; flex: 0 0 auto; }
+    .fi-tab-icon svg { display: block; }
+    .fi-tab:hover { color: var(--fi-row-value-fg); border-bottom-color: var(--fi-section-border); }
+    .fi-tab.active { color: var(--fi-tab-active); font-weight: 700; border-bottom-color: var(--fi-tab-active); }
+    .fi-tab-content { overflow-y: auto; padding: 10px 14px 14px; flex: 1 1 auto; animation: fi-fade-in 130ms ease-out; }
+    @keyframes fi-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fi-tab-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+    .fi-table {
+      border: 1px solid var(--fi-section-border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--fi-copyable-bg);
+      margin: 2px 0 4px;
+    }
+    .fi-table-head {
+      display: flex;
+      padding: 5px 10px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--fi-section-title-fg);
-      margin-bottom: 6px;
+      background: var(--fi-table-header-bg);
       border-bottom: 1px solid var(--fi-section-border);
-      padding-bottom: 4px;
     }
-    .fi-row { display: flex; gap: 10px; padding: 4px 0; align-items: flex-start; }
-    .fi-row-label { flex: 0 0 108px; color: var(--fi-row-label-fg); font-weight: 600; font-size: 12px; padding-top: 1px; }
+    .fi-table-head span:first-child { flex: 0 0 112px; }
+    .fi-table-head span:last-child { flex: 1 1 auto; }
+    .fi-row { display: flex; gap: 10px; padding: 7px 10px; align-items: flex-start; }
+    .fi-table .fi-row + .fi-row { border-top: 1px solid var(--fi-section-border); }
+    .fi-table .fi-row:nth-child(even) { background: var(--fi-table-stripe-bg); }
+    .fi-table .fi-row:hover { background: var(--fi-copy-btn-hover-bg); }
+    .fi-row-label {
+      flex: 0 0 112px;
+      color: var(--fi-row-label-fg);
+      font-weight: 600;
+      font-size: 12px;
+      padding-top: 1px;
+    }
+    .fi-table .fi-row-label {
+      border-right: 1px solid var(--fi-section-border);
+      padding-right: 10px;
+      margin-right: -1px;
+    }
+    .fi-row-label.fi-mono-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--fi-attr-key);
+      font-weight: 600;
+    }
     .fi-row-value {
       flex: 1 1 auto;
       color: var(--fi-row-value-fg);
@@ -207,6 +359,13 @@
     }
     .fi-pill.yes { background: var(--fi-pill-yes-bg); color: var(--fi-pill-yes-fg); }
     .fi-pill.no { background: var(--fi-pill-no-bg); color: var(--fi-pill-no-fg); }
+    .fi-pill.blue { background: var(--fi-chip-blue-bg); color: var(--fi-chip-blue-fg); }
+    .fi-pill.purple { background: var(--fi-chip-purple-bg); color: var(--fi-chip-purple-fg); }
+    .fi-pill.green { background: var(--fi-chip-green-bg); color: var(--fi-chip-green-fg); }
+    .fi-pill.orange { background: var(--fi-chip-orange-bg); color: var(--fi-chip-orange-fg); }
+    .fi-pill.teal { background: var(--fi-chip-teal-bg); color: var(--fi-chip-teal-fg); }
+    .fi-pill.pink { background: var(--fi-chip-pink-bg); color: var(--fi-chip-pink-fg); }
+    .fi-pill.gray { background: var(--fi-pill-bg); color: var(--fi-pill-fg); }
     .fi-copyable {
       display: flex;
       align-items: center;
@@ -249,19 +408,7 @@
       max-height: 120px;
       overflow-y: auto;
     }
-    .fi-attr-list { display: flex; flex-direction: column; gap: 3px; }
-    .fi-attr-item {
-      display: flex;
-      gap: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 11.5px;
-      background: var(--fi-attr-bg);
-      border-radius: 4px;
-      padding: 3px 6px;
-    }
-    .fi-attr-key { color: var(--fi-attr-key); }
-    .fi-attr-val { color: var(--fi-attr-val); word-break: break-all; }
-    .fi-empty-hint { color: var(--fi-hint-fg); font-size: 12px; font-style: italic; }
+    .fi-empty-hint { color: var(--fi-hint-fg); font-size: 12px; font-style: italic; padding: 2px 0; }
     .fi-footer { flex: 0 0 auto; padding: 10px 14px; border-top: 1px solid var(--fi-footer-border); background: var(--fi-footer-bg); }
     .fi-copy-all-btn {
       width: 100%;
@@ -288,7 +435,11 @@
     panelEl: null,
     bodyEl: null,
     lastInfo: null,
+    lastElement: null,
     settingsRef: { copyFormat: "text" },
+    activeTab: 0,
+    history: [], // { label, info, el } — most recent last
+    historyPos: -1, // index into history currently on screen
   };
 
   function escapeHtml(str) {
@@ -299,6 +450,140 @@
       '"': "&quot;",
       "'": "&#39;",
     }[c]));
+  }
+
+  /** Small monochrome (currentColor) tab icons, purely decorative — keyed by tab kind. */
+  const ICONS = {
+    target: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke-linecap="round"/></svg>`,
+    odoo: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><ellipse cx="8" cy="3.4" rx="5.5" ry="1.8"/><path d="M2.5 3.4v4.1c0 1 2.5 1.8 5.5 1.8s5.5-.8 5.5-1.8V3.4"/><path d="M2.5 7.5v4.1c0 1 2.5 1.8 5.5 1.8s5.5-.8 5.5-1.8V7.5"/></svg>`,
+    info: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 7.3v4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+    state: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="5" width="13" height="6" rx="3"/><circle cx="10.5" cy="8" r="1.7" fill="currentColor" stroke="none"/></svg>`,
+    selectors: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M2 2l5.2 12 1.9-4.9L14 7.2z"/></svg>`,
+    structure: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8 1.5l6.5 3.2L8 8 1.5 4.7z"/><path d="M1.5 8.3L8 11.5l6.5-3.2"/><path d="M1.5 11.6L8 14.8l6.5-3.2"/></svg>`,
+    validation: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 1.5l5.5 2v4c0 4-2.5 6.2-5.5 7-3-.8-5.5-3-5.5-7v-4z"/><path d="M5.7 8.2l1.6 1.6 3-3.4" stroke-linecap="round"/></svg>`,
+    data: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"><path d="M1.5 8.5V2.5a1 1 0 0 1 1-1H8l6.5 6.5-6.5 6.5z"/><circle cx="4.7" cy="4.7" r="1" fill="currentColor" stroke="none"/></svg>`,
+    aria: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 8s2.7-4.5 7-4.5S15 8 15 8s-2.7 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg>`,
+    other: `<svg viewBox="0 0 16 16" fill="currentColor" stroke="none"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>`,
+    column: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2" width="5.5" height="12" rx="1"/><rect x="9" y="2" width="5.5" height="12" rx="1"/></svg>`,
+    cell: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M8 1.5v13M1.5 8h13"/></svg>`,
+    table: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M1.5 6.3h13M1.5 10h13M6.2 2.5v11M10.8 2.5v11"/></svg>`,
+    sample: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="4.5" width="13" height="7" rx="1.5"/><path d="M5 6.5v3" stroke-linecap="round"/></svg>`,
+  };
+
+  /** Best-effort color category for a type-ish string (ORM ttype, HTML input type, generic field type) — purely cosmetic. */
+  function typeChipClass(value) {
+    const v = String(value || "").toLowerCase();
+    if (!v) return "gray";
+    if (/many2one|one2many|many2many|relation/.test(v)) return "purple";
+    if (/^bool|checkbox|radio/.test(v)) return "green";
+    if (/int|float|number|monetary|numeric/.test(v)) return "orange";
+    if (/date|time/.test(v)) return "teal";
+    if (/^select/.test(v)) return "pink";
+    if (/char|text|html|string|email|url|password|tel|search/.test(v)) return "blue";
+    return "gray";
+  }
+
+  /** Briefly flashes an outline/background around a real page element (e.g. after "scroll to element"). Inline styles only — no page CSS touched. */
+  function flashHighlightElement(el) {
+    if (!el || !el.isConnected) return;
+    const prevOutline = el.style.outline;
+    const prevOffset = el.style.outlineOffset;
+    const prevBg = el.style.backgroundColor;
+    const prevTransition = el.style.transition;
+    el.style.transition = "outline-color 200ms ease, background-color 200ms ease";
+    el.style.outline = "3px solid #f59e0b";
+    el.style.outlineOffset = "2px";
+    el.style.backgroundColor = "rgba(245, 158, 11, 0.15)";
+    setTimeout(() => {
+      el.style.outline = prevOutline;
+      el.style.outlineOffset = prevOffset;
+      el.style.backgroundColor = prevBg;
+      setTimeout(() => {
+        el.style.transition = prevTransition;
+      }, 220);
+    }, 900);
+  }
+
+  /** A short, human label for a history chip — best-effort per info kind. */
+  function shortLabelFor(info) {
+    if (!info) return "";
+    if (info.kind === "form") return info.fieldLabel || info.nameAttr || info.id || "Field";
+    if (info.kind === "listCell") return info.columnName ? `Cell: ${info.columnName}` : "Cell";
+    return info.columnName || "Column";
+  }
+
+  /** Pulls a readable "Label: value" text dump out of a rendered tab's DOM — used by the per-tab copy button so it doesn't need a parallel text-building path. */
+  function extractTabText(containerEl) {
+    const lines = [];
+    containerEl.querySelectorAll(".fi-row").forEach((rowEl) => {
+      const labelEl = rowEl.querySelector(".fi-row-label");
+      const valueEl = rowEl.querySelector(".fi-row-value");
+      if (!labelEl || !valueEl) return;
+      lines.push(`${labelEl.textContent.trim()}: ${valueEl.textContent.trim()}`);
+    });
+    containerEl.querySelectorAll(".fi-copyable").forEach((box) => {
+      const heading = box.previousElementSibling;
+      const label = heading && heading.classList.contains("fi-row-label") ? heading.textContent.trim() : "Value";
+      const code = box.querySelector("code");
+      lines.push(`${label}: ${code ? code.textContent.trim() : ""}`);
+    });
+    containerEl.querySelectorAll(".fi-html-preview").forEach((pre) => {
+      lines.push(`HTML: ${pre.textContent.trim()}`);
+    });
+    containerEl.querySelectorAll(".fi-empty-hint").forEach((hint) => {
+      if (!hint.closest(".fi-row")) lines.push(hint.textContent.trim());
+    });
+    return lines.join("\n");
+  }
+
+  /** Lets the user drag the panel by its header, switching it from right/bottom to left/top anchoring on first drag. */
+  function makeDraggable(panel, header) {
+    let dragging = false;
+    let startX = 0,
+      startY = 0,
+      startLeft = 0,
+      startTop = 0;
+
+    header.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest(".fi-icon-btn, .fi-close-btn")) return;
+      const rect = panel.getBoundingClientRect();
+      panel.style.left = `${rect.left}px`;
+      panel.style.top = `${rect.top}px`;
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+      panel.style.width = `${rect.width}px`;
+      panel.style.height = `${rect.height}px`;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      dragging = true;
+      header.classList.add("fi-dragging");
+      try {
+        header.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    });
+
+    header.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const maxLeft = window.innerWidth - 60;
+      const maxTop = window.innerHeight - 40;
+      panel.style.left = `${Math.min(Math.max(startLeft + dx, -panel.offsetWidth + 80), maxLeft)}px`;
+      panel.style.top = `${Math.min(Math.max(startTop + dy, 0), maxTop)}px`;
+    });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      header.classList.remove("fi-dragging");
+      try {
+        header.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+    header.addEventListener("pointerup", endDrag);
+    header.addEventListener("pointercancel", endDrag);
   }
 
   ui.ensureHost = function () {
@@ -323,9 +608,14 @@
         <div class="fi-header-title">
           <span>Field Inspector</span>
           <span class="fi-badge" id="fi-kind-badge">Form</span>
+          <span class="fi-required-dot" id="fi-required-dot" hidden title="This field is required"></span>
         </div>
-        <button type="button" class="fi-close-btn" id="fi-close-btn" title="Close" aria-label="Close">×</button>
+        <div class="fi-header-actions">
+          <button type="button" class="fi-icon-btn" id="fi-jump-btn" title="Scroll to element">${ICONS.target}</button>
+          <button type="button" class="fi-close-btn" id="fi-close-btn" title="Close" aria-label="Close">×</button>
+        </div>
       </div>
+      <div class="fi-history" id="fi-history" hidden></div>
       <div class="fi-body" id="fi-body"></div>
       <div class="fi-footer">
         <button type="button" class="fi-copy-all-btn" id="fi-copy-all-btn">Copy All Information</button>
@@ -335,12 +625,36 @@
 
     panel.querySelector("#fi-close-btn").addEventListener("click", () => ui.closePanel());
     panel.querySelector("#fi-copy-all-btn").addEventListener("click", (e) => ui.copyAll(e.currentTarget));
+    panel.querySelector("#fi-jump-btn").addEventListener("click", () => ui.jumpToElement());
+    makeDraggable(panel, panel.querySelector(".fi-header"));
 
     shadow.addEventListener("click", (e) => {
+      const tabCopyBtn = e.target.closest(".fi-tab-copy-btn");
+      if (tabCopyBtn) {
+        const body = tabCopyBtn.closest(".fi-tab-content").querySelector(".fi-tab-body");
+        ui.copySingle(tabCopyBtn, body ? extractTabText(body) : "");
+        return;
+      }
       const copyBtn = e.target.closest(".fi-copy-btn");
       if (copyBtn) {
         const text = copyBtn.getAttribute("data-copy-value") || "";
         ui.copySingle(copyBtn, text);
+        return;
+      }
+      const historyBtn = e.target.closest(".fi-history-item");
+      if (historyBtn) {
+        const idx = Number(historyBtn.getAttribute("data-history-index"));
+        const entry = ui.history[idx];
+        if (entry) ui.showPanel(entry.info, ui.settingsRef, entry.el, { fromHistory: true, historyIndex: idx });
+        return;
+      }
+      const tabBtn = e.target.closest(".fi-tab");
+      if (tabBtn) {
+        const idx = Number(tabBtn.getAttribute("data-tab-index"));
+        if (!Number.isNaN(idx) && idx !== ui.activeTab) {
+          ui.activeTab = idx;
+          if (ui.lastInfo) renderPanelBody(ui.lastInfo);
+        }
       }
     });
 
@@ -348,6 +662,12 @@
     ui.shadowRoot = shadow;
     ui.panelEl = panel;
     ui.bodyEl = panel.querySelector("#fi-body");
+  };
+
+  ui.jumpToElement = function () {
+    if (!ui.lastElement || !ui.lastElement.isConnected) return;
+    ui.lastElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    flashHighlightElement(ui.lastElement);
   };
 
   ui.copySingle = async function (btn, text) {
@@ -382,10 +702,19 @@
     if (opts.pill) {
       const pillClass = value === "Yes" ? "yes" : "no";
       valueHtml = `<span class="fi-pill ${pillClass}">${escapeHtml(value)}</span>`;
+    } else if (opts.chip) {
+      valueHtml = value ? `<span class="fi-pill ${opts.chip}">${escapeHtml(value)}</span>` : escapeHtml("—");
+    } else if (opts.html) {
+      valueHtml = value; // pre-built, already-safe HTML (e.g. a link)
     } else {
       valueHtml = escapeHtml(value === "" || value == null ? "—" : value);
     }
     return `<div class="fi-row"><div class="fi-row-label">${escapeHtml(label)}</div><div class="${cls}">${valueHtml}</div></div>`;
+  }
+
+  /** Wraps one or more row()-built rows in a bordered, striped, column-divided table box. */
+  function table(rowsHtml) {
+    return `<div class="fi-table">${rowsHtml}</div>`;
   }
 
   function copyableBlock(value) {
@@ -393,21 +722,23 @@
     return `<div class="fi-copyable"><code>${safe || "—"}</code><button type="button" class="fi-copy-btn" data-copy-value="${safe}" title="Copy">📋</button></div>`;
   }
 
-  function attrList(obj) {
-    const keys = Object.keys(obj || {});
-    if (keys.length === 0) return `<div class="fi-empty-hint">None</div>`;
-    return `<div class="fi-attr-list">${keys
-      .map(
-        (k) =>
-          `<div class="fi-attr-item"><span class="fi-attr-key">${escapeHtml(k)}</span><span class="fi-attr-val">=${escapeHtml(
-            String(obj[k])
-          )}</span></div>`
-      )
-      .join("")}</div>`;
+  /** A table() of [key, value] pairs with monospace keys — used for attribute lists and decoded selection options. */
+  function kvTable(pairs) {
+    if (!pairs.length) return `<div class="fi-empty-hint">None</div>`;
+    return table(
+      pairs
+        .map(
+          ([k, v]) =>
+            `<div class="fi-row"><div class="fi-row-label fi-mono-label">${escapeHtml(k)}</div><div class="fi-row-value fi-mono">${escapeHtml(
+              String(v)
+            )}</div></div>`
+        )
+        .join("")
+    );
   }
 
-  function section(title, innerHtml) {
-    return `<div class="fi-section"><div class="fi-section-title">${escapeHtml(title)}</div>${innerHtml}</div>`;
+  function attrList(obj) {
+    return kvTable(Object.entries(obj || {}));
   }
 
   /** Best-effort parse of an ir.model.fields "selection" Python-literal string, e.g. "[('a','A'),('b','B')]". */
@@ -445,14 +776,12 @@
     return `<div class="fi-row-label" style="margin:10px 0 2px;">Declared In Current View (form)</div>${body}`;
   }
 
-  function renderOdooSection(info) {
-    if (!info.odooFieldName) return "";
-
+  /** Inner content (no wrapper) for the "Odoo Field" tab — shared by form fields and list data cells. */
+  function renderOdooTabContent(info) {
     if (!ui.settingsRef.odooMode) {
-      return section(
-        "Odoo Field Definition",
-        row("Technical Field Name", info.odooFieldName, { mono: true }) +
-          `<div class="fi-empty-hint" style="padding:4px 0;">Odoo Developer Mode is off — turn it on in the popup for a live model/type/relation lookup from your Odoo server.</div>`
+      return (
+        table(row("Technical Field Name", info.odooFieldName, { mono: true })) +
+        `<div class="fi-empty-hint">Odoo Developer Mode is off — turn it on in the popup for a live model/type/relation lookup from your Odoo server.</div>`
       );
     }
 
@@ -461,21 +790,21 @@
       row("Technical Field Name", info.odooFieldName, { mono: true }),
     ];
     const meta = info.odooFieldMeta;
+    let hint = "";
+    let selectionOptionsHtml = "";
 
     if (meta === undefined) {
-      rows.push(`<div class="fi-empty-hint" style="padding:4px 0;">Looking up live field definition from Odoo…</div>`);
+      hint = `<div class="fi-empty-hint">Looking up live field definition from Odoo…</div>`;
     } else if (meta === null) {
-      rows.push(
-        `<div class="fi-empty-hint" style="padding:4px 0;">No matching ir.model.fields row${
-          info.odooModel ? ` on ${escapeHtml(info.odooModel)}` : ""
-        } — model may not have been detected yet, or this is a non-stored/dynamic field.</div>`
-      );
+      hint = `<div class="fi-empty-hint">No matching ir.model.fields row${
+        info.odooModel ? ` on ${escapeHtml(info.odooModel)}` : ""
+      } — model may not have been detected yet, or this is a non-stored/dynamic field.</div>`;
     } else if (meta.error) {
-      rows.push(`<div class="fi-empty-hint" style="padding:4px 0;">Could not reach the Odoo backend: ${escapeHtml(meta.error)}</div>`);
+      hint = `<div class="fi-empty-hint">Could not reach the Odoo backend: ${escapeHtml(meta.error)}</div>`;
     } else {
       rows.push(
         row("Label (field_description)", meta.field_description || "—"),
-        row("ORM Type", meta.ttype, { mono: true })
+        row("ORM Type", meta.ttype, { chip: typeChipClass(meta.ttype) })
       );
       if (meta.relation) rows.push(row("Relation Model", meta.relation, { mono: true }));
       rows.push(
@@ -487,215 +816,310 @@
       if (meta.compute) rows.push(row("Computed", "Yes", { pill: true }));
       if (meta.help) rows.push(row("Help Text", meta.help));
 
-      const options = meta.ttype === "selection" ? parsePySelectionLiteral(meta.selection) : null;
-      if (options) {
-        rows.push(
-          `<div class="fi-row-label" style="margin:6px 0 2px;">Selection Options</div><div class="fi-attr-list">${options
-            .map(([key, label]) => `<div class="fi-attr-item"><span class="fi-attr-key">${escapeHtml(key)}</span><span class="fi-attr-val">= ${escapeHtml(label)}</span></div>`)
-            .join("")}</div>`
-        );
-      }
-
       if (meta.id != null) {
         const url = `${location.origin}/web#model=ir.model.fields&id=${encodeURIComponent(meta.id)}&view_type=form`;
         rows.push(
-          `<div class="fi-row"><div class="fi-row-label">Field Record</div><div class="fi-row-value"><a class="fi-link" href="${escapeHtml(
-            url
-          )}" target="_blank" rel="noopener">Open in Odoo (Settings → Technical → Fields) ↗</a></div></div>`
+          row(
+            "Field Record",
+            `<a class="fi-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">Open in Odoo (Settings → Technical → Fields) ↗</a>`,
+            { html: true }
+          )
         );
+      }
+
+      const options = meta.ttype === "selection" ? parsePySelectionLiteral(meta.selection) : null;
+      if (options) {
+        selectionOptionsHtml = `<div class="fi-row-label" style="margin:10px 0 4px;">Selection Options</div>${kvTable(options)}`;
       }
     }
 
-    rows.push(renderViewAttrsBlock(info));
+    let html = table(rows.join("")) + hint + selectionOptionsHtml;
+    html += renderViewAttrsBlock(info);
 
     const snippet = `<field name="${info.odooFieldName}"/>`;
-    rows.push(`<div class="fi-row-label" style="margin:8px 0 2px;">View XML Snippet</div>${copyableBlock(snippet)}`);
-
-    return section("Odoo Field Definition (live)", rows.join(""));
-  }
-
-  function renderFormInfo(info) {
-    let html = "";
-    html += renderOdooSection(info);
-
-    const fieldInfoRows = [row("Field Label", info.fieldLabel)];
-    fieldInfoRows.push(
-      row("HTML Element", info.element, { mono: true }),
-      row("Field Type", info.fieldType),
-      row("Input Type", info.inputType || "—"),
-      row("Field ID", info.id, { mono: true }),
-      row("Name Attribute", info.nameAttr, { mono: true }),
-      row("CSS Classes", info.classes, { mono: true }),
-      row("Placeholder", info.placeholder)
-    );
-    html += section("Field Info", fieldInfoRows.join(""));
-
-    html += section(
-      "Current State",
-      [
-        row("Current Value", info.currentValue),
-        row("Default Value", info.defaultValue),
-        row("Required", info.required ? "Yes" : "No", { pill: true }),
-        row("Read Only", info.readOnly ? "Yes" : "No", { pill: true }),
-        row("Disabled", info.disabled ? "Yes" : "No", { pill: true }),
-      ].join("")
-    );
-
-    html += section(
-      "Selectors",
-      `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
-        info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`
-    );
-
-    html += section(
-      "Structure",
-      [
-        row("Parent Element", info.parentElement, { mono: true }),
-        row(
-          "Form Name/ID",
-          info.owningForm ? `${info.owningForm.name || info.owningForm.id || "(unnamed form)"}` : "Not inside a <form>"
-        ),
-        `<div class="fi-row-label" style="margin:6px 0 2px;">HTML Preview</div><div class="fi-html-preview">${escapeHtml(
-          info.htmlPreview
-        )}</div>`,
-      ].join("")
-    );
-
-    if (Object.keys(info.validationAttributes || {}).length) {
-      html += section("Validation Attributes", attrList(info.validationAttributes));
-    }
-    if (Object.keys(info.dataAttributes || {}).length) {
-      html += section("Data Attributes", attrList(info.dataAttributes));
-    }
-    if (Object.keys(info.ariaAttributes || {}).length) {
-      html += section("ARIA Attributes", attrList(info.ariaAttributes));
-    }
-    if (Object.keys(info.otherAttributes || {}).length) {
-      html += section("Other Attributes", attrList(info.otherAttributes));
-    }
+    html += `<div class="fi-row-label" style="margin:10px 0 4px;">View XML Snippet</div>${copyableBlock(snippet)}`;
 
     return html;
   }
 
-  function renderListInfo(info) {
-    let html = "";
-    html += section(
-      "Column Info",
-      [
-        row("Column Name", info.columnName),
-        row("Element Type", info.element, { mono: true }),
-        row("Column Index", String(info.columnIndex)),
-        row("ID", info.id, { mono: true }),
-        row("Name", info.nameAttr, { mono: true }),
-        row("CSS Classes", info.classes, { mono: true }),
-      ].join("")
-    );
+  /** Builds the ordered list of { title, html } tabs for a Form Field panel. */
+  function renderFormInfo(info) {
+    const tabs = [];
 
-    html += section(
-      "Selectors",
-      `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
+    if (info.odooFieldName) tabs.push({ title: "Odoo Field", icon: "odoo", html: renderOdooTabContent(info) });
+
+    tabs.push({
+      title: "Field Info",
+      icon: "info",
+      html: table(
+        [
+          row("Field Label", info.fieldLabel),
+          row("HTML Element", info.element, { mono: true }),
+          row("Field Type", info.fieldType, { chip: typeChipClass(info.fieldType) }),
+          info.inputType ? row("Input Type", info.inputType, { chip: typeChipClass(info.inputType) }) : row("Input Type", "—"),
+          row("Field ID", info.id, { mono: true }),
+          row("Name Attribute", info.nameAttr, { mono: true }),
+          row("CSS Classes", info.classes, { mono: true }),
+          row("Placeholder", info.placeholder),
+        ].join("")
+      ),
+    });
+
+    tabs.push({
+      title: "State",
+      icon: "state",
+      html: table(
+        [
+          row("Current Value", info.currentValue),
+          row("Default Value", info.defaultValue),
+          row("Required", info.required ? "Yes" : "No", { pill: true }),
+          row("Read Only", info.readOnly ? "Yes" : "No", { pill: true }),
+          row("Disabled", info.disabled ? "Yes" : "No", { pill: true }),
+        ].join("")
+      ),
+    });
+
+    tabs.push({
+      title: "Selectors",
+      icon: "selectors",
+      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
         info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`
-    );
+      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
+    });
 
-    html += section(
-      "HTML Structure",
-      `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>`
-    );
+    tabs.push({
+      title: "Structure",
+      icon: "structure",
+      html:
+        table(
+          row("Parent Element", info.parentElement, { mono: true }) +
+            row(
+              "Form Name/ID",
+              info.owningForm ? `${info.owningForm.name || info.owningForm.id || "(unnamed form)"}` : "Not inside a <form>"
+            )
+        ) +
+        `<div class="fi-row-label" style="margin:10px 0 4px;">HTML Preview</div><div class="fi-html-preview">${escapeHtml(
+          info.htmlPreview
+        )}</div>`,
+    });
+
+    if (Object.keys(info.validationAttributes || {}).length) {
+      tabs.push({ title: "Validation", icon: "validation", html: attrList(info.validationAttributes) });
+    }
+    if (Object.keys(info.dataAttributes || {}).length) {
+      tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
+    }
+    if (Object.keys(info.ariaAttributes || {}).length) {
+      tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
+    }
+    if (Object.keys(info.otherAttributes || {}).length) {
+      tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
+    }
+
+    return tabs;
+  }
+
+  /** Builds the ordered list of { title, html } tabs for a List / Column (header) panel. */
+  function renderListInfo(info) {
+    const tabs = [];
+
+    tabs.push({
+      title: "Column Info",
+      icon: "column",
+      html: table(
+        [
+          row("Column Name", info.columnName),
+          row("Element Type", info.element, { mono: true }),
+          row("Column Index", String(info.columnIndex)),
+          row("ID", info.id, { mono: true }),
+          row("Name", info.nameAttr, { mono: true }),
+          row("CSS Classes", info.classes, { mono: true }),
+        ].join("")
+      ),
+    });
+
+    tabs.push({
+      title: "Selectors",
+      icon: "selectors",
+      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
+        info.cssSelector
+      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
+    });
+
+    tabs.push({ title: "Structure", icon: "structure", html: `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>` });
 
     if (info.table) {
-      html += section(
-        "Parent Table / Grid",
-        [
-          row("Tag", info.table.tag, { mono: true }),
-          row("ID", info.table.id, { mono: true }),
-          row("Classes", info.table.classes, { mono: true }),
-          row("Row Count", info.table.rowCount == null ? "—" : String(info.table.rowCount)),
-          row("Column Count", info.table.columnCount == null ? "—" : String(info.table.columnCount)),
-        ].join("")
-      );
+      tabs.push({
+        title: "Table",
+        icon: "table",
+        html: table(
+          [
+            row("Tag", info.table.tag, { mono: true }),
+            row("ID", info.table.id, { mono: true }),
+            row("Classes", info.table.classes, { mono: true }),
+            row("Row Count", info.table.rowCount == null ? "—" : String(info.table.rowCount)),
+            row("Column Count", info.table.columnCount == null ? "—" : String(info.table.columnCount)),
+          ].join("")
+        ),
+      });
     }
 
     if (info.relatedInput) {
-      html += section(
-        "Related Form/Input (sample row)",
-        [row("Element", info.relatedInput.tag, { mono: true }), row("Type", info.relatedInput.type), row("CSS Selector", info.relatedInput.cssSelector, { mono: true })].join(
-          ""
-        )
-      );
+      tabs.push({
+        title: "Sample Input",
+        icon: "sample",
+        html: table(
+          [
+            row("Element", info.relatedInput.tag, { mono: true }),
+            row("Type", info.relatedInput.type, { chip: typeChipClass(info.relatedInput.type) }),
+            row("CSS Selector", info.relatedInput.cssSelector, { mono: true }),
+          ].join("")
+        ),
+      });
     }
 
-    if (Object.keys(info.dataAttributes || {}).length) {
-      html += section("Data Attributes", attrList(info.dataAttributes));
-    }
-    if (Object.keys(info.ariaAttributes || {}).length) {
-      html += section("ARIA Attributes", attrList(info.ariaAttributes));
-    }
-    if (Object.keys(info.otherAttributes || {}).length) {
-      html += section("Other Attributes / Metadata", attrList(info.otherAttributes));
-    }
+    if (Object.keys(info.dataAttributes || {}).length) tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
+    if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
+    if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
 
-    return html;
+    return tabs;
   }
 
   /** A single table/grid data cell — column+row context, as opposed to renderListInfo's column-only view. */
   function renderDataCellInfo(info) {
-    let html = "";
-    html += renderOdooSection(info);
+    const tabs = [];
 
-    html += section(
-      "Cell Info",
-      [
-        row("Column Name", info.columnName || "—"),
-        row("Column Index", String(info.columnIndex)),
-        row("Row Index", info.rowIndex >= 0 ? String(info.rowIndex) : "—"),
-        row("Element Type", info.element, { mono: true }),
-        row("Cell Text", info.cellText),
-        row("ID", info.id, { mono: true }),
-        row("CSS Classes", info.classes, { mono: true }),
-      ].join("")
-    );
+    if (info.odooFieldName) tabs.push({ title: "Odoo Field", icon: "odoo", html: renderOdooTabContent(info) });
 
-    html += section(
-      "Selectors",
-      `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
+    tabs.push({
+      title: "Cell Info",
+      icon: "cell",
+      html: table(
+        [
+          row("Column Name", info.columnName || "—"),
+          row("Column Index", String(info.columnIndex)),
+          row("Row Index", info.rowIndex >= 0 ? String(info.rowIndex) : "—"),
+          row("Element Type", info.element, { mono: true }),
+          row("Cell Text", info.cellText),
+          row("ID", info.id, { mono: true }),
+          row("CSS Classes", info.classes, { mono: true }),
+        ].join("")
+      ),
+    });
+
+    tabs.push({
+      title: "Selectors",
+      icon: "selectors",
+      html: `<div class="fi-row-label" style="margin-bottom:2px;">CSS Selector</div>${copyableBlock(
         info.cssSelector
-      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`
-    );
+      )}<div class="fi-row-label" style="margin:8px 0 2px;">XPath</div>${copyableBlock(info.xpath)}`,
+    });
 
-    html += section("HTML Structure", `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>`);
+    tabs.push({ title: "Structure", icon: "structure", html: `<div class="fi-html-preview">${escapeHtml(info.htmlPreview)}</div>` });
 
-    if (Object.keys(info.dataAttributes || {}).length) html += section("Data Attributes", attrList(info.dataAttributes));
-    if (Object.keys(info.ariaAttributes || {}).length) html += section("ARIA Attributes", attrList(info.ariaAttributes));
-    if (Object.keys(info.otherAttributes || {}).length) html += section("Other Attributes", attrList(info.otherAttributes));
+    if (Object.keys(info.dataAttributes || {}).length) tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
+    if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
+    if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
 
-    return html;
+    return tabs;
   }
 
+  /** Dispatches to the right tab-array builder for the panel's kind. */
   function renderBody(info) {
     if (info.kind === "list") return renderListInfo(info);
     if (info.kind === "listCell") return renderDataCellInfo(info);
     return renderFormInfo(info);
   }
 
+  function renderTabsBar(tabs, activeIndex) {
+    return `<div class="fi-tabs" role="tablist">${tabs
+      .map((t, i) => {
+        const icon = t.icon && ICONS[t.icon] ? `<span class="fi-tab-icon">${ICONS[t.icon]}</span>` : "";
+        return `<button type="button" class="fi-tab${
+          i === activeIndex ? " active" : ""
+        }" data-tab-index="${i}" role="tab" aria-selected="${i === activeIndex}">${icon}<span>${escapeHtml(t.title)}</span></button>`;
+      })
+      .join("")}</div>`;
+  }
+
+  /** Whether this field/cell is required — checked both from the DOM (form) and, once it arrives, the live Odoo metadata. */
+  function isRequired(info) {
+    if (!info) return false;
+    if (info.kind === "form" && info.required) return true;
+    return !!(info.odooFieldMeta && !info.odooFieldMeta.error && info.odooFieldMeta.required);
+  }
+
+  function updateBadge(info) {
+    const badge = ui.panelEl.querySelector("#fi-kind-badge");
+    const badgeText = { list: "List / Column", listCell: "List / Cell" }[info.kind] || "Form Field";
+    badge.textContent = badgeText;
+    badge.classList.toggle("list", info.kind === "list" || info.kind === "listCell");
+    const dot = ui.panelEl.querySelector("#fi-required-dot");
+    if (dot) dot.hidden = !isRequired(info);
+  }
+
+  /** Renders the tab bar + the active tab's content into the panel body. Preserves ui.activeTab across re-renders (e.g. async Odoo updates) unless it's now out of range. */
+  function renderPanelBody(info) {
+    updateBadge(info);
+    const tabs = renderBody(info);
+    if (!tabs.length) {
+      ui.bodyEl.innerHTML = `<div class="fi-tab-content"><div class="fi-empty-hint">Nothing to show.</div></div>`;
+      return;
+    }
+    if (ui.activeTab < 0 || ui.activeTab >= tabs.length) ui.activeTab = 0;
+    ui.bodyEl.innerHTML = `${renderTabsBar(tabs, ui.activeTab)}<div class="fi-tab-content"><div class="fi-tab-toolbar"><button type="button" class="fi-copy-btn fi-tab-copy-btn" title="Copy this tab's info">📋 Copy Tab</button></div><div class="fi-tab-body">${
+      tabs[ui.activeTab].html
+    }</div></div>`;
+  }
+
   let odooRequestSeq = 0;
 
-  ui.showPanel = function (info, settings) {
+  function renderHistoryBar() {
+    const el = ui.panelEl.querySelector("#fi-history");
+    if (!el) return;
+    if (ui.history.length < 2) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+    el.innerHTML = ui.history
+      .map(
+        (entry, i) =>
+          `<button type="button" class="fi-history-item${i === ui.historyPos ? " current" : ""}" data-history-index="${i}" title="${escapeHtml(
+            entry.label
+          )}">${escapeHtml(entry.label)}</button>`
+      )
+      .join("");
+  }
+
+  ui.showPanel = function (info, settings, el, opts = {}) {
     try {
       ui.ensureHost();
       ui.lastInfo = info;
+      ui.lastElement = el || null;
       ui.settingsRef = settings || ui.settingsRef;
       // Showing any panel invalidates whatever live Odoo lookup was still
       // in flight for the previously-inspected field.
       odooRequestSeq += 1;
+      ui.activeTab = 0; // a newly inspected field always starts on its first tab
 
-      const badge = ui.panelEl.querySelector("#fi-kind-badge");
-      const badgeText = { list: "List / Column", listCell: "List / Cell" }[info.kind] || "Form Field";
-      badge.textContent = badgeText;
-      badge.classList.toggle("list", info.kind === "list" || info.kind === "listCell");
+      if (opts.fromHistory) {
+        ui.historyPos = opts.historyIndex;
+      } else {
+        const label = shortLabelFor(info);
+        const last = ui.history[ui.history.length - 1];
+        if (last && last.el === el) {
+          ui.history[ui.history.length - 1] = { label, info, el };
+        } else {
+          ui.history.push({ label, info, el });
+          if (ui.history.length > 6) ui.history.shift();
+        }
+        ui.historyPos = ui.history.length - 1;
+      }
+      renderHistoryBar();
 
-      ui.bodyEl.innerHTML = renderBody(info);
+      renderPanelBody(info);
       ui.panelEl.hidden = false;
     } catch (err) {
       console.error("[Field Inspector] showPanel failed:", err);
@@ -716,7 +1140,7 @@
     if (requestId !== odooRequestSeq) return; // stale: a different field/panel is showing now
     if (!canHaveOdooLookup(ui.lastInfo)) return;
     ui.lastInfo.odooFieldMeta = meta;
-    if (ui.bodyEl) ui.bodyEl.innerHTML = renderBody(ui.lastInfo);
+    if (ui.bodyEl) renderPanelBody(ui.lastInfo);
   };
 
   /** Applies a live "how is this field declared in the current view" result, same staleness guard as above. */
@@ -724,7 +1148,7 @@
     if (requestId !== odooRequestSeq) return;
     if (!canHaveOdooLookup(ui.lastInfo)) return;
     ui.lastInfo.odooViewAttrs = viewAttrs;
-    if (ui.bodyEl) ui.bodyEl.innerHTML = renderBody(ui.lastInfo);
+    if (ui.bodyEl) renderPanelBody(ui.lastInfo);
   };
 
   ui.closePanel = function () {
@@ -743,6 +1167,9 @@
     ui.shadowRoot = null;
     ui.panelEl = null;
     ui.bodyEl = null;
+    ui.lastElement = null;
+    ui.history = [];
+    ui.historyPos = -1;
   };
 
   /** Plain-text rendering of the live Odoo section, shared by the Form Field and List Cell copy-all text. */

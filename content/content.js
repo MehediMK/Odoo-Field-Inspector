@@ -85,7 +85,7 @@
         info.odooModel = odoo.detectCurrentModel();
       }
 
-      ui.showPanel(info, state.settings);
+      ui.showPanel(info, state.settings, resolved.el);
 
       // Live Odoo field definition lookup: runs after the panel is already
       // showing (synchronous DOM-derived info first, network second) and is
