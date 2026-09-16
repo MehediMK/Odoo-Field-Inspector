@@ -1,0 +1,31 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#171a22"/>
+      <stop offset="1" stop-color="#0b0e14"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="26" y1="26" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#714b67"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded-square backdrop, matches the panel header's dark navy -->
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#bgGrad)"/>
+
+  <!-- Soft glow behind the glass for depth at large sizes -->
+  <circle cx="52" cy="52" r="40" fill="url(#glow)"/>
+
+  <!-- Magnifying-glass lens -->
+  <circle cx="52" cy="52" r="25" fill="none" stroke="url(#glassGrad)" stroke-width="10"/>
+
+  <!-- Handle -->
+  <line x1="70.5" y1="70.5" x2="97" y2="97" stroke="url(#glassGrad)" stroke-width="11" stroke-linecap="round"/>
+
+  <!-- A short "field" tick inside the lens: nods to inspecting a form field, not just generic search -->
+  <line x1="41" y1="52" x2="63" y2="52" stroke="#f5f3ff" stroke-width="5" stroke-linecap="round" opacity="0.92"/>
+</svg>

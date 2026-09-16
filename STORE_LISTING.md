@@ -117,14 +117,27 @@ server, for the same inspection purpose.
 | Asset | Requirement | Status |
 |---|---|---|
 | Store icon | 128×128 PNG | ✅ `icons/icon128.png` (bundled in the package; also upload separately if the dashboard asks) |
-| Screenshot(s) | 1280×800 or 640×400, at least 1, up to 5 | ✅ `promo/screenshot_1_panel.png` (1280×800) — generated from the real extension, not a mockup |
+| Screenshot(s) | 1280×800 or 640×400, at least 1, up to 5 | ✅ 3 screenshots at 1280×800, all generated from the real extension (not hand-drawn mockups) |
 | Small promo tile | 440×280 PNG, optional | Not created — optional, skip unless you want one |
 | Marquee | 1400×560 PNG, optional | Not created — optional, only needed if Google features the extension |
 
-Consider adding 1–2 more real screenshots before submitting — e.g. the
-List View panel on a `<th>`, and the Odoo Field Definition section on an
-actual Odoo record (recommended: a screenshot from your own Odoo
-instance, since only you can log into it).
+Current screenshots (`promo/`):
+1. `screenshot_1_panel.png` — the tabbed panel's Odoo Field tab on a many2one
+   field: model/type/relation, the `many2one` type chip, "Declared In
+   Current View", and the "Open in Odoo" link.
+2. `screenshot_2_finder.png` — the Field Finder open and unfiltered,
+   showing every form field and list column it detected with their
+   technical names.
+3. `screenshot_3_popup.png` — the popup (Enable Inspector, Detection
+   Modes, Odoo Developer Mode) composited into a browser-chrome mockup;
+   the popup itself is the real rendered extension UI, only the
+   surrounding browser frame/page behind it is illustrative.
+
+All three use a self-contained demo HTML page (fabricated Odoo-style
+markup + fabricated field metadata), not a real Odoo instance or real
+data — safe to regenerate any time after a UI change. Consider swapping
+in 1–2 screenshots from your own live Odoo instance before submitting,
+since only you can log into it.
 
 ## Package
 
@@ -144,9 +157,9 @@ and intentionally excluded from the package.
    `manifest.json`'s `name` to match before rebuilding the zip.
 3. Load-unpacked test the exact zipped contents one more time (not just
    your working directory) to make sure nothing needed got excluded.
-4. Consider a fresh screenshot showing the "Declared In Current View" and
-   "Open in Odoo" parts of the panel, and the new Odoo Developer Mode
-   toggle in the popup — `promo/screenshot_1_panel.png` predates those.
+4. The three `promo/` screenshots are current as of the tabbed-panel,
+   colored type chips, and Field Finder UI. Regenerate them (or add
+   real-Odoo ones) if the panel's look changes again before submitting.
 5. Submissions that request no host permissions and have a clear single
    purpose (this one) typically review faster, but first-time developer
    accounts can still take several business days.
