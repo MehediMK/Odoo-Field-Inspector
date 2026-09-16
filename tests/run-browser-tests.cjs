@@ -5,16 +5,19 @@ const { mkdtempSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { resolve, join } = require('node:path');
 const { pathToFileURL } = require('node:url');
+for (const fixture of ['domain-builder.html', 'chatter.html']) {
 const profile = mkdtempSync(join(tmpdir(), 'fi-browser-test-'));
 try {
   const result = spawnSync(process.env.CHROME_BIN || 'google-chrome', [
     '--headless', '--no-sandbox', '--disable-gpu', '--disable-background-networking',
     '--allow-file-access-from-files', '--user-data-dir=' + profile,
-    '--virtual-time-budget=2000', '--dump-dom', pathToFileURL(resolve('tests/domain-builder.html')).href,
+    '--virtual-time-budget=6000', '--dump-dom', pathToFileURL(resolve('tests', fixture)).href,
   ], { encoding: 'utf8', timeout: 30000 });
   const output = result.stdout?.match(/<pre id="result">([\s\S]*?)<\/pre>/)?.[1];
   if (!output?.startsWith('PASS:')) throw new Error(output || result.error?.message || result.stderr || 'Chrome did not return a result.');
-  console.log(output);
+  console.log(fixture + ": " + output);
 } finally {
   rmSync(profile, { recursive: true, force: true });
+}
+
 }

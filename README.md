@@ -322,6 +322,38 @@ on the page.
 - **Esc** closes the finder first if it's open, then the inspector panel
   on a second press, so they don't fight over the same key.
 
+## Chatter Manager
+
+With the inspector enabled, open **Options → Chatter Manager** on an Odoo form
+with supported chatter. The action is omitted on other pages and when the
+active dialog has no chatter.
+
+- **Hide / Show Chatter** collapses the form's chatter container locally.
+- **Expand Chatter** enlarges the manager's read-only message reader.
+- Search loaded messages by author or body; filter messages, internal notes,
+  and tracked changes. Unclassified messages remain visible in type filters.
+- **Jump to Latest** clears filters, reveals the native chatter, and scrolls to
+  the newest loaded message. Timestamps or message IDs are used when available;
+  otherwise the reader follows Odoo chatter's newest-first order.
+- **Copy Message** copies author, displayed date, and message text as plain text.
+- **Reset Layout** restores chatter visibility, reader size, search, and filters.
+
+The reader works with messages already rendered by Odoo, including email text
+in accessible open Shadow DOM roots. It does not fetch older messages, send,
+edit, or delete messages, or alter followers/activities. **Refresh** rescans
+loaded content. Closing the manager preserves its layout choices for the
+current record; disabling the inspector or changing records restores them.
+Draft composer text is excluded from the reader and copied messages.
+
+`content/chatter.js` contains detection, the reader, and lifecycle cleanup;
+`content.css` supplies removable visibility/highlight classes. Detection uses
+modern `.o-mail-Chatter` / `.o-mail-Message` and legacy `.o_Chatter` /
+`.o_Message` markup. Reference templates: [Odoo 18 chatter](https://github.com/odoo/odoo/blob/18.0/addons/mail/static/src/chatter/web/chatter.xml)
+and [Odoo 16 messages](https://github.com/odoo/odoo/blob/16.0/addons/mail/static/src/components/message/message.xml).
+Custom markup or translated message-type labels may remain unclassified.
+Browser checks cover representative modern/legacy forms, dialogs, record
+changes, and cleanup; compatibility with a live Odoo instance still needs verification.
+
 ## Domain Builder
 
 Enable the inspector, open the floating Options button, and choose **Domain Builder**.

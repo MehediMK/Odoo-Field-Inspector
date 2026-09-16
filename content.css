@@ -19,3 +19,7 @@ html[data-fi-active] .fi-hover-field {
   background-color: rgba(37, 99, 235, 0.08) !important;
   cursor: pointer !important;
 }
+
+/* Chatter Manager owns only these classes; removing them restores Odoo's CSS. */
+html[data-fi-active="true"] .fi-chatter-collapsed { display: none !important; }
+html[data-fi-active="true"] .fi-chatter-message-flash { outline: 2px solid #875a7b !important; outline-offset: 2px !important; }

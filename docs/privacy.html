@@ -67,7 +67,7 @@
   </div>
 
   <h2>What the extension does</h2>
-  <p>Field Inspector lets you click a form field or a table/list column on any web page to see a read-only developer panel with its HTML details: element type, attributes, a CSS selector, an XPath, and — on pages served by an Odoo instance — the field's real definition from that Odoo server's own database. It's a developer/inspection tool; it never submits forms, never edits page content, and never changes a field's value, checked state, or focus.</p>
+  <p>Field Inspector lets you click a form field or a table/list column on any web page to see a read-only developer panel with its HTML details: element type, attributes, a CSS selector, an XPath, and — on pages served by an Odoo instance — the field's real definition from that Odoo server's own database. It's a developer/inspection tool; it never submits forms or changes record values. Chatter Manager can temporarily hide chatter and show a read-only local message reader; disabling inspection restores the layout.</p>
 
   <h2>Data we collect</h2>
   <p><strong>None.</strong> We (the developer) do not operate a backend, collect analytics, or receive any data from installs of this extension. There is no telemetry, no crash reporting, no usage tracking, and no advertising in this extension.</p>
@@ -88,6 +88,7 @@
         <td>The <strong>same Odoo server</strong> the current page is already loaded from, over that page's existing logged-in session</td>
         <td>Fetch the field's real <code>ir.model.fields</code> definition and how it's declared in the current view</td>
       </tr>
+      <tr><td>Loaded chatter messages (author, displayed date, message body)</td><td>When you open Chatter Manager</td><td>Nowhere — shown and searched locally; clipboard only when you choose Copy Message</td><td>Read, search, and filter already-loaded messages</td></tr>
       <tr><td>Domain Builder model name</td><td>When you click Load Fields with Odoo Developer Mode on</td><td>The same Odoo server, using your existing session</td><td>Read field definitions using <code>fields_get</code></td></tr>
       <tr><td>Domain Builder conditions and values</td><td>When you use the builder</td><td>Nowhere — tab memory; clipboard only when you choose Copy</td><td>Generate a domain locally without applying it to records</td></tr>
       <tr>
@@ -116,6 +117,8 @@
     <li>Your preference settings persist in <code>chrome.storage.local</code> until you change them again or remove the extension (removing the extension clears this storage, per Chrome's standard behavior).</li>
     <li>Odoo field-definition lookups are cached only in memory, only for the life of the current browser tab — closing or navigating the tab away clears that cache. Nothing is written to disk beyond your preference settings above.</li>
   </ul>
+
+  <p>Chatter Manager message data stays in tab memory and is cleared when inspection is disabled or the detected record changes. It does not read composer drafts.</p>
 
   <p>Domain Builder drafts and loaded field definitions stay in tab memory. Reloading, navigating away, or closing the tab clears them.</p>
 

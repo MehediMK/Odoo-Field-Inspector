@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}.o_form_view{display:flex;min-height:350px;border:1px solid #ccc}.sheet{flex:1;padding:15px}.o-mail-Form-chatter{width:300px;flex-shrink:0;background:white}.o-mail-Message,.o_Message{padding:15px;border-bottom:1px solid #ddd}.modal{position:fixed;inset:10px;background:white;border:2px solid #333;z-index:10}
+</style></head><body>
+<div class="o_form_view" data-res-id="1"><div class="sheet"><h1>Example Order</h1><input value="Unchanged"></div><aside class="o-mail-Form-chatter" style="border-left: 1px solid gray"><div class="o-mail-Chatter"><div class="o-mail-Thread">
+<div class="o-mail-Message" aria-label="Message" data-message-id="30"><span class="o-mail-Message-author">Alice</span><time datetime="2026-09-17T10:00:00Z">Today</time><div class="o-mail-Message-body">Order approved.</div><button>Reply</button></div>
+<div class="o-mail-Message" aria-label="Note" data-message-id="20"><span class="o-mail-Message-author">Bob</span><time datetime="2026-09-17T09:00:00Z">Today</time><div class="o-mail-Message-body o-note">Internal budget discussion.</div></div>
+<div class="o-mail-Message" aria-label="System notification" data-message-id="10"><span class="o-mail-Message-author">Admin</span><div class="o-mail-Message-tracking">Status: Draft → Confirmed</div></div>
+<div class="o-mail-Message" data-message-id="5"><span class="o-mail-Message-author">Guest</span><div class="o-mail-Message-body">Custom message type.</div></div>
+</div><div contenteditable="true">UNSENT DRAFT</div></div></aside></div>
+<pre id="result">RUNNING</pre>
+<script>let receiver;window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();}}}};</script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+const tick=()=>new Promise(resolve=>setTimeout(resolve,180));
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const {ui,chatter,utils}=window.__FI__;
+let copied='';utils.copyToClipboard=async value=>{copied=value;return true;};
+let requests=0;window.fetch=()=>{requests++;throw Error('Unexpected network request');};
+const form=document.querySelector('.o_form_view'),wrapper=document.querySelector('aside'),root=document.querySelector('.o-mail-Chatter'),thread=document.querySelector('.o-mail-Thread');
+const originalStyle=wrapper.getAttribute('style');
+check(!chatter.available(),'Unavailable before enabling');
+message('FI_ENABLE',{odooMode:false,highlight:false});ui.openOptions();
+check(!!ui.optionsPanelEl.querySelector('[data-option="chatter"]'),'Chatter menu present on active form');
+ui.optionsPanelEl.querySelector('[data-option="chatter"]').click();
+check(chatter.isOpen()&&!ui.isOptionsOpen(),'Menu opens manager');
+const panel=ui.shadowRoot.querySelector('.fi-chatter-panel');const get=s=>panel.querySelector(s);const action=a=>get(`[data-action="${a}"]`).click();
+const search=value=>{get('[data-search]').value=value;get('[data-search]').dispatchEvent(new Event('input',{bubbles:true}));};
+const filter=value=>{get('[data-filter]').value=value;get('[data-filter]').dispatchEvent(new Event('change',{bubbles:true}));};
+check(get('[data-count]').textContent.startsWith('4 of 4'),'Loaded messages indexed');
+search('alice');check(get('[data-count]').textContent.startsWith('1 of 4'),'Search by author');
+search('budget');check(get('[data-results]').textContent.includes('Bob')&&!get('[data-results]').textContent.includes('Alice'),'Search by message text');
+search('');filter('note');check(get('[data-count]').textContent.startsWith('2 of 4')&&get('[data-results]').textContent.includes('Guest'),'Unknown types retained with notes');
+filter('tracking');check(get('[data-results]').textContent.includes('Draft → Confirmed')&&!get('[data-results]').textContent.includes('Bob'),'Tracked changes filter');
+get('[data-action="copy"]').click();await Promise.resolve();check(copied.split('Draft → Confirmed').length===2,'Tracked changes copied once');
+filter('message');get('[data-action="copy"]').click();await Promise.resolve();
+check(copied.includes('Order approved.')&&!copied.includes('Reply')&&!copied.includes('UNSENT DRAFT'),'Copy plain message text without controls or drafts');
+action('hide');check(getComputedStyle(wrapper).display==='none','Hide collapses layout wrapper');
+check(chatter.available(),'Hidden chatter remains manageable');
+action('expand');check(panel.classList.contains('fi-chatter-expanded'),'Expanded reading area');
+action('reset');check(getComputedStyle(wrapper).display!=='none'&&wrapper.getAttribute('style')===originalStyle&&!panel.classList.contains('fi-chatter-expanded'),'Reset restores exact original inline style');
+let jumped=null;thread.querySelectorAll('.o-mail-Message').forEach(el=>{el.scrollIntoView=()=>{jumped=el.dataset.messageId;};});
+search('budget');action('latest');check(jumped==='30'&&get('[data-search]').value==='','Jump to newest message clears restrictive filters');
+const added=document.createElement('div');added.className='o-mail-Message';added.setAttribute('aria-label','Message');added.dataset.messageId='40';added.innerHTML='<span class="o-mail-Message-author">Carol</span><div class="o-mail-Message-body">Fresh update</div>';thread.prepend(added);await tick();
+check(get('[data-count]').textContent.startsWith('5 of 5'),'New messages indexed automatically');
+const email=document.createElement('div');email.className='o-mail-Message';email.innerHTML='<span class="o-mail-Message-author">Email Sender</span><div class="o-mail-Message-body"><div class="email-host"></div></div>';email.querySelector('.email-host').attachShadow({mode:'open'}).innerHTML='<style>.x{color:red}</style><p>Email shadow text</p>';thread.append(email);await tick();search('shadow text');check(get('[data-count]').textContent.startsWith('1 of 6'),'Open-shadow email body searchable');
+action('hide');chatter.close();form.dataset.resId='2';await tick();check(getComputedStyle(wrapper).display!=='none','Record identity change restores hidden chatter even when panel closed');
+chatter.open();check(get('[data-search]').value==='','New record clears search');
+action('hide');history.pushState({},'',location.href+'#next-record');await new Promise(resolve=>setTimeout(resolve,500));check(getComputedStyle(wrapper).display!=='none','SPA URL navigation restores layout');
+action('hide');chatter.close();thread.innerHTML='<div class="o-mail-Message" aria-label="Message"><div class="o-mail-Message-body">Replacement record</div></div>';await tick();check(getComputedStyle(wrapper).display!=='none','Reused form with replaced messages restores layout');
+chatter.open();const dialog=document.createElement('div');dialog.className='modal show';dialog.innerHTML='<h2>No chatter in this dialog</h2>';document.body.append(dialog);await tick();ui.openOptions();check(!ui.optionsPanelEl.querySelector('[data-option="chatter"]')&&!chatter.isOpen(),'Dialog without chatter does not target background form');
+dialog.innerHTML='<div class="o_form_view"><div class="sheet">Wizard</div><div class="o_chatter"><div class="o_Chatter"><div class="o_Message o-not-discussion"><span class="o_Message_authorName">Wizard Author</span><div class="o_Message_content">Wizard-only note</div></div></div></div></div>';await tick();ui.openOptions();check(!!ui.optionsPanelEl.querySelector('[data-option="chatter"]'),'Legacy wizard chatter detected');chatter.open();check(get('[data-results]').textContent.includes('Wizard-only note')&&!get('[data-results]').textContent.includes('Replacement record'),'Wizard messages isolated from background record');
+action('hide');const legacy=dialog.querySelector('.o_chatter');check(getComputedStyle(legacy).display==='none'&&getComputedStyle(wrapper).display!=='none','Hide affects wizard only');
+dialog.remove();await tick();check(!legacy.classList.contains('fi-chatter-collapsed'),'Closing dialog restores detached layout');
+chatter.open();action('hide');message('FI_DISABLE');check(!chatter.isOpen()&&getComputedStyle(wrapper).display!=='none'&&!wrapper.classList.contains('fi-chatter-collapsed'),'Disable restores layout and closes manager');
+thread.append(added);await tick();check(!chatter.isOpen(),'Stopped observer does not reopen manager');
+check(requests===0,'No network requests');
+check(form.querySelector('input').value==='Unchanged','Form values untouched');
+message('FI_ENABLE',{highlight:false});chatter.open();panel.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,composed:true}));check(!chatter.isOpen()&&ui.shadowRoot.activeElement===ui.finderBtnEl,'Escape closes and restores focus');message('FI_DISABLE');
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

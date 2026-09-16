@@ -170,6 +170,10 @@
       e.preventDefault();
       e.stopPropagation();
       ui.closeOptions(true);
+    } else if (window.__FI__.chatter?.isOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.__FI__.chatter.close(true);
     } else if (window.__FI__.domainBuilder?.isOpen()) {
       e.preventDefault();
       e.stopPropagation();
@@ -215,6 +219,7 @@
     ui.ensureHost();
     ui.settingsRef = state.settings;
     ui.showFinderButton();
+    window.__FI__.chatter?.start();
     notifyBackground(true);
   }
 
@@ -227,6 +232,7 @@
     ui.closePanel();
     ui.closeFinder();
     ui.hideFinderButton();
+    window.__FI__.chatter?.stop();
     window.__FI__.domainBuilder?.close();
     if (lastHoverEl) {
       detector.setHover(lastHoverEl, false);

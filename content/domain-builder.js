@@ -194,6 +194,7 @@
   }
 
   function open() {
+    window.__FI__.chatter?.close();
     ensurePanel();
     if (ui.finderBtnEl?.hidden) return;
     ui.closeOptions(); ui.closeFinder();

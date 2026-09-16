@@ -578,6 +578,7 @@
 
   /** Small monochrome (currentColor) tab icons, purely decorative — keyed by tab kind. */
   const ICONS = {
+    chatter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 3h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6 4V4a1 1 0 0 1 1-1z"/><path d="M7 8h10M7 12h7"/></svg>`,
     history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6M12 7v5l3 2"/></svg>`,
     copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg>`,
     power: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v9M6 6a9 9 0 1 0 12 0"/></svg>`,
@@ -779,6 +780,7 @@
       ui.closeOptions(true);
       if (action === "search") ui.openFinder();
       else if (action === "domain") window.__FI__.domainBuilder.open();
+      else if (action === "chatter") window.__FI__.chatter.open();
       else if (action === "history") {
         const index = Number(button.dataset.index);
         const entry = ui.history[index];
@@ -924,6 +926,8 @@
     if (ui.finderBtnEl.hidden) return;
     ui.closeFinder();
     window.__FI__.domainBuilder?.close();
+    window.__FI__.chatter?.close();
+    const hasChatter = window.__FI__.chatter?.available();
     const items = recent
       ? `<button type="button" class="fi-option" data-option="back">← All options</button>` +
         ui.history.map((entry, index) => ({ entry, index })).reverse().map(({ entry, index }) =>
@@ -931,6 +935,7 @@
         ).join("")
       : `<button type="button" class="fi-option" data-option="search">Search Fields</button>
         <button type="button" class="fi-option" data-option="domain">Domain Builder</button>
+        ${hasChatter ? '<button type="button" class="fi-option" data-option="chatter">Chatter Manager</button>' : ""}
         <button type="button" class="fi-option" data-option="recent" ${ui.history.length ? "" : "disabled"}>Recent Fields</button>
         <button type="button" class="fi-option" data-option="highlight" aria-pressed="${!!ui.settingsRef.highlight}">Highlight Fields · ${ui.settingsRef.highlight ? "On" : "Off"}</button>
         <button type="button" class="fi-option" data-option="odooMode" aria-pressed="${!!ui.settingsRef.odooMode}">Odoo Developer Mode · ${ui.settingsRef.odooMode ? "On" : "Off"}</button>
@@ -938,7 +943,7 @@
         <button type="button" class="fi-option" data-option="disable">Disable Inspector</button>`;
     ui.optionsPanelEl.innerHTML = `<div class="fi-options-actions">${items}</div>`;
     const actionIcons = {
-      domain: ICONS.selectors, search: ICONS.search, recent: ICONS.history, history: ICONS.history,
+      chatter: ICONS.chatter, domain: ICONS.selectors, search: ICONS.search, recent: ICONS.history, history: ICONS.history,
       highlight: ICONS.target, odooMode: ICONS.odoo, copy: ICONS.copy,
       disable: ICONS.power, back: ICONS.back,
     };
@@ -971,6 +976,7 @@
   };
 
   ui.openFinder = function () {
+    window.__FI__.chatter?.close();
     window.__FI__.domainBuilder?.close();
     ui.ensureHost();
     ui.closeOptions();
@@ -1483,6 +1489,7 @@
   };
 
   ui.destroy = function () {
+    window.__FI__.chatter?.stop();
     window.__FI__.domainBuilder?.close();
     ui.closePanel();
     if (ui.hostEl && ui.hostEl.parentNode) ui.hostEl.parentNode.removeChild(ui.hostEl);

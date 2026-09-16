@@ -39,8 +39,9 @@ any web page to see a read-only developer panel with its HTML details:
 element type, attributes, a CSS selector, an XPath, and — on pages
 served by an Odoo instance — the field's real definition from that
 Odoo server's own database. It's a developer/inspection tool; it never
-submits forms, never edits page content, and never changes a field's
-value, checked state, or focus.
+submits forms or changes record values. Chatter Manager can temporarily hide
+chatter and show a read-only local message reader; disabling inspection
+restores the layout.
 
 ## Data we collect
 
@@ -55,6 +56,7 @@ advertising in this extension.
 |---|---|---|---|
 | The clicked field's/column's HTML (tag, attributes, classes, id, current value, etc.) | Whenever you click a detected field while the inspector is enabled | **Nowhere** — rendered entirely inside the extension's own on-page panel, in your browser | Show you the field's structure |
 | A field's technical model + field name (e.g. `res.partner.email`) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field | The **same Odoo server** the current page is already loaded from, over that page's existing logged-in session | Fetch the field's real `ir.model.fields` definition and how it's declared in the current view, so you don't have to guess it from CSS classes |
+| Loaded chatter messages (author, displayed date, message body) | When you open Chatter Manager | **Nowhere** — shown and searched locally; clipboard only when you choose Copy Message | Read, search, and filter already-loaded messages |
 | Domain Builder model name | When you click **Load Fields** with Odoo Developer Mode on | The **same Odoo server**, using your existing session | Read field definitions using `fields_get` |
 | Domain Builder conditions and values | When you use the builder | **Nowhere** — tab memory; clipboard only when you choose Copy | Generate a domain locally without applying it to records |
 | Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off) | Whenever you change a setting in the popup or Options menu | **Nowhere** — saved only to `chrome.storage.local`, a storage area local to your browser profile | Remember your preferences between sessions |
@@ -86,6 +88,9 @@ enable it there.
   life of the current browser tab — closing or navigating the tab away
   clears that cache. Nothing is written to disk beyond your preference
   settings above.
+
+Chatter Manager message data stays in tab memory and is cleared when inspection
+is disabled or the detected record changes. It does not read composer drafts.
 
 Domain Builder drafts and loaded field definitions also stay in tab memory.
 Reloading, navigating away, or closing the tab clears them.
