@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
   odooMode: true,
 };
 
-const CONTENT_FILES = ["content/utils.js", "content/odoo.js", "content/detector.js", "content/ui.js", "content/content.js"];
+const CONTENT_FILES = ["content/utils.js", "content/odoo.js", "content/detector.js", "content/ui.js", "content/domain.js", "content/domain-builder.js", "content/content.js"];
 const CONTENT_CSS = ["content.css"];
 
 const els = {};

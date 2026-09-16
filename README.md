@@ -322,6 +322,40 @@ on the page.
 - **Esc** closes the finder first if it's open, then the inspector panel
   on a second press, so they don't fight over the same key.
 
+## Domain Builder
+
+Enable the inspector, open the floating Options button, and choose **Domain Builder**.
+Add conditions, select **Match all (AND)** or **Match any (OR)**, then copy the
+Python domain or JSON representation. The preview follows [Odoo search-domain
+syntax](https://www.odoo.com/documentation/19.0/developer/reference/backend/orm.html#search-domains).
+This version supports one all/any group; nested groups are not yet supported.
+
+The model name is prefilled when detected and can be edited. **Load Fields**
+fetches field labels, technical names, types, and selection choices using
+`fields_get` on the same Odoo server, with the existing session. This requires
+Odoo Developer Mode. Loading a different model resets the conditions. Without
+metadata access, technical names (including dotted relational paths) and value
+types can be entered manually.
+
+Boolean values, numeric values, record IDs, dates, UTC datetimes, selection
+keys, and JSON lists for `in`/`not in` are supported. Invalid values prevent
+copying. **Is set / is not set** generates comparisons against `False`.
+Domains are generated locally; they are not executed or applied to records.
+Drafts remain in tab memory until navigation/reload, and closing the builder
+preserves the draft. Disabling the inspector closes the builder.
+
+The implementation lives in `content/domain.js` (serialization/validation) and
+`content/domain-builder.js` (UI), loaded after `ui.js` and before `content.js`.
+Run validation with:
+
+```sh
+node --test tests/domain.test.cjs
+node tests/run-browser-tests.cjs
+```
+
+The browser checks use headless Chrome with mocked extension APIs and Odoo
+metadata. Set `CHROME_BIN` if the executable is not named `google-chrome`.
+
 ## Installation
 
 1. Download or clone this folder (`chrome-field-inspector/`).

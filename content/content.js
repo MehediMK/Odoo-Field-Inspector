@@ -170,6 +170,10 @@
       e.preventDefault();
       e.stopPropagation();
       ui.closeOptions(true);
+    } else if (window.__FI__.domainBuilder?.isOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.__FI__.domainBuilder.close(true);
     } else if (ui.isFinderOpen && ui.isFinderOpen()) {
       ui.closeFinder();
     } else if (ui.isPanelOpen()) {
@@ -223,6 +227,7 @@
     ui.closePanel();
     ui.closeFinder();
     ui.hideFinderButton();
+    window.__FI__.domainBuilder?.close();
     if (lastHoverEl) {
       detector.setHover(lastHoverEl, false);
       lastHoverEl = null;
@@ -231,8 +236,10 @@
   }
 
   function updateSettings(newSettings) {
+    const wasOdooMode = state.settings.odooMode;
     state.settings = { ...state.settings, ...(newSettings || {}) };
     ui.settingsRef = state.settings;
+    if (wasOdooMode && !state.settings.odooMode) window.__FI__.domainBuilder?.close();
     if (state.enabled) {
       detector.applyHighlights(state.settings);
       detector.startObserving(state.settings);

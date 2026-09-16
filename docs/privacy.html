@@ -52,7 +52,7 @@
 <div class="wrap">
   <p class="eyebrow"><a href="index.html">&larr; Odoo Field Inspector</a></p>
   <h1>Privacy Policy</h1>
-  <p class="effective">Effective date: 2026-09-16</p>
+  <p class="effective">Effective date: 2026-09-17</p>
 
   <p>This policy covers the "Odoo Field Inspector" Chrome extension ("the extension", "Field Inspector"). It's written to be read on its own — you don't need to read the source code to know what this extension does with your data, though the code is open for inspection in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>.</p>
 
@@ -61,6 +61,7 @@
     <ul>
       <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and we have no analytics, telemetry, or crash-reporting of any kind.</li>
       <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name only</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
+      <li>In <strong>Domain Builder</strong>, clicking <strong>Load Fields</strong> with Odoo Developer Mode on sends the chosen model name to the same Odoo server to read field definitions. Domain conditions and values stay in tab memory and are copied to your clipboard only when you choose Copy; they are not sent to Odoo.</li>
       <li>Your only stored data is your own preference settings, kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
     </ul>
   </div>
@@ -87,9 +88,11 @@
         <td>The <strong>same Odoo server</strong> the current page is already loaded from, over that page's existing logged-in session</td>
         <td>Fetch the field's real <code>ir.model.fields</code> definition and how it's declared in the current view</td>
       </tr>
+      <tr><td>Domain Builder model name</td><td>When you click Load Fields with Odoo Developer Mode on</td><td>The same Odoo server, using your existing session</td><td>Read field definitions using <code>fields_get</code></td></tr>
+      <tr><td>Domain Builder conditions and values</td><td>When you use the builder</td><td>Nowhere — tab memory; clipboard only when you choose Copy</td><td>Generate a domain locally without applying it to records</td></tr>
       <tr>
         <td>Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off)</td>
-        <td>Whenever you change a setting in the popup</td>
+        <td>Whenever you change a setting in the popup or Options menu</td>
         <td><strong>Nowhere</strong> — saved only to <code>chrome.storage.local</code>, local to your browser profile</td>
         <td>Remember your preferences between sessions</td>
       </tr>
@@ -114,8 +117,10 @@
     <li>Odoo field-definition lookups are cached only in memory, only for the life of the current browser tab — closing or navigating the tab away clears that cache. Nothing is written to disk beyond your preference settings above.</li>
   </ul>
 
+  <p>Domain Builder drafts and loaded field definitions stay in tab memory. Reloading, navigating away, or closing the tab clears them.</p>
+
   <h2>Third parties</h2>
-  <p>We do not share, sell, or transfer any data to third parties, because we do not collect any data in the first place. The only outbound network request this extension ever makes is the Odoo field-lookup call described above, and that request goes directly from your browser to the Odoo server the current page is already on — never to us, and never to any third-party analytics, advertising, or data-broker service.</p>
+  <p>We do not share, sell, or transfer any data to third parties, because we do not collect any data in the first place. The outbound network requests are the Odoo metadata lookups described above, including Domain Builder field definitions, and these go directly from your browser to the Odoo server the current page is already on — never to us, and never to any third-party analytics, advertising, or data-broker service.</p>
 
   <h2>Children's privacy</h2>
   <p>This extension is a developer tool and is not directed at children. It does not knowingly collect any information from anyone, including children under 13.</p>

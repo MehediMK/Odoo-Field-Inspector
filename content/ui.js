@@ -442,12 +442,33 @@
       justify-content: center;
       z-index: 2147483647;
     }
-    .fi-options-btn { width: auto; padding: 0 14px; border-radius: 22px; gap: 7px; font: 600 13px system-ui, sans-serif; }
-    .fi-options-actions { padding: 6px; overflow-y: auto; }
-    .fi-option { display: block; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
-    .fi-option:hover, .fi-option:focus-visible { background: var(--fi-copy-btn-hover-bg); }
-    .fi-option:disabled { opacity: .45; cursor: default; }
+    .fi-options-btn { transition: transform 150ms ease, background 150ms ease; }
+    .fi-options-btn[aria-expanded="true"] { transform: rotate(45deg); }
+    .fi-options-panel {
+      position: fixed; right: 16px; bottom: 72px;
+      width: max-content; max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 88px); overflow-y: auto;
+      z-index: 2147483647; color: var(--fi-fg);
+      font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .fi-options-panel[hidden] { display: none; }
+    .fi-options-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; padding: 5px; }
+    .fi-option {
+      display: flex; align-items: center; gap: 9px; max-width: 100%;
+      min-height: 42px; padding: 10px 16px; border: 1px solid var(--fi-section-border);
+      border-radius: 24px; background: var(--fi-bg); color: inherit;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, .18);
+      text-align: left; font: inherit; font-weight: 500; cursor: pointer;
+      overflow-wrap: anywhere; transition: background 120ms ease, transform 120ms ease;
+    }
+    .fi-option:hover:not(:disabled) { background: var(--fi-copy-btn-hover-bg); transform: translateX(-3px); }
+    .fi-option:focus-visible { outline: 2px solid var(--fi-tab-active); outline-offset: 2px; }
+    .fi-option[aria-pressed="true"] { border-color: var(--fi-tab-active); }
+    .fi-option:disabled { opacity: .5; cursor: default; }
+    .fi-option-icon { display: flex; flex: 0 0 18px; }
+    .fi-option-icon svg { width: 18px; height: 18px; }
     .fi-option small { display: block; color: var(--fi-hint-fg); margin-top: 3px; overflow-wrap: anywhere; }
+    @media (prefers-reduced-motion: reduce) { .fi-options-btn, .fi-option { transition: none; } }
     .fi-finder-btn[hidden] { display: none; }
     .fi-finder-btn svg { width: 20px; height: 20px; }
     .fi-finder-btn:hover { background: var(--fi-copy-all-hover-bg); }
@@ -557,6 +578,10 @@
 
   /** Small monochrome (currentColor) tab icons, purely decorative — keyed by tab kind. */
   const ICONS = {
+    history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6M12 7v5l3 2"/></svg>`,
+    copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg>`,
+    power: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v9M6 6a9 9 0 1 0 12 0"/></svg>`,
+    back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 5-7 7 7 7M3 12h18"/></svg>`,
     target: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke-linecap="round"/></svg>`,
     odoo: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><ellipse cx="8" cy="3.4" rx="5.5" ry="1.8"/><path d="M2.5 3.4v4.1c0 1 2.5 1.8 5.5 1.8s5.5-.8 5.5-1.8V3.4"/><path d="M2.5 7.5v4.1c0 1 2.5 1.8 5.5 1.8s5.5-.8 5.5-1.8V7.5"/></svg>`,
     info: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 7.3v4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.9" fill="currentColor" stroke="none"/></svg>`,
@@ -734,12 +759,13 @@
     finderBtn.setAttribute("aria-expanded", "false");
     finderBtn.setAttribute("aria-controls", "fi-options-panel");
     finderBtn.hidden = true;
-    finderBtn.textContent = "⚙ Options";
+    finderBtn.setAttribute("aria-label", "Inspector options");
+    finderBtn.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 3 2 3-1 2 3 3-1 1-3 3-1 2-3-2-2 1-3-3-2-3 1-2-3z"/><circle cx="12" cy="11" r="3"/></svg>`;
     shadow.appendChild(finderBtn);
 
     const optionsPanel = document.createElement("div");
     optionsPanel.id = "fi-options-panel";
-    optionsPanel.className = "fi-finder-panel";
+    optionsPanel.className = "fi-options-panel";
     optionsPanel.hidden = true;
     optionsPanel.setAttribute("role", "region");
     optionsPanel.setAttribute("aria-label", "Inspector options");
@@ -752,6 +778,7 @@
       if (action === "back") { ui.openOptions(); return; }
       ui.closeOptions(true);
       if (action === "search") ui.openFinder();
+      else if (action === "domain") window.__FI__.domainBuilder.open();
       else if (action === "history") {
         const index = Number(button.dataset.index);
         const entry = ui.history[index];
@@ -896,18 +923,34 @@
     ui.ensureHost();
     if (ui.finderBtnEl.hidden) return;
     ui.closeFinder();
+    window.__FI__.domainBuilder?.close();
     const items = recent
       ? `<button type="button" class="fi-option" data-option="back">← All options</button>` +
         ui.history.map((entry, index) => ({ entry, index })).reverse().map(({ entry, index }) =>
           `<button type="button" class="fi-option" data-option="history" data-index="${index}">${escapeHtml(entry.label)}<small>${escapeHtml(entry.info.odooFieldName || entry.info.nameAttr || "")}</small></button>`
         ).join("")
       : `<button type="button" class="fi-option" data-option="search">Search Fields</button>
+        <button type="button" class="fi-option" data-option="domain">Domain Builder</button>
         <button type="button" class="fi-option" data-option="recent" ${ui.history.length ? "" : "disabled"}>Recent Fields</button>
         <button type="button" class="fi-option" data-option="highlight" aria-pressed="${!!ui.settingsRef.highlight}">Highlight Fields · ${ui.settingsRef.highlight ? "On" : "Off"}</button>
         <button type="button" class="fi-option" data-option="odooMode" aria-pressed="${!!ui.settingsRef.odooMode}">Odoo Developer Mode · ${ui.settingsRef.odooMode ? "On" : "Off"}</button>
         <button type="button" class="fi-option" data-option="copy" ${ui.lastInfo ? "" : "disabled"}>Copy Current Field</button>
         <button type="button" class="fi-option" data-option="disable">Disable Inspector</button>`;
-    ui.optionsPanelEl.innerHTML = `<div class="fi-finder-header">${recent ? "Recent Fields" : "Inspector Options"}</div><div class="fi-options-actions">${items}</div>`;
+    ui.optionsPanelEl.innerHTML = `<div class="fi-options-actions">${items}</div>`;
+    const actionIcons = {
+      domain: ICONS.selectors, search: ICONS.search, recent: ICONS.history, history: ICONS.history,
+      highlight: ICONS.target, odooMode: ICONS.odoo, copy: ICONS.copy,
+      disable: ICONS.power, back: ICONS.back,
+    };
+    ui.optionsPanelEl.querySelectorAll("[data-option]").forEach((button) => {
+      const label = document.createElement("span");
+      while (button.firstChild) label.appendChild(button.firstChild);
+      const icon = document.createElement("span");
+      icon.className = "fi-option-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = actionIcons[button.dataset.option] || ICONS.info;
+      button.append(icon, label);
+    });
     ui.optionsPanelEl.hidden = false;
     ui.finderBtnEl.setAttribute("aria-expanded", "true");
     ui.optionsPanelEl.querySelector("button:not(:disabled)")?.focus();
@@ -928,6 +971,7 @@
   };
 
   ui.openFinder = function () {
+    window.__FI__.domainBuilder?.close();
     ui.ensureHost();
     ui.closeOptions();
     const result = typeof ui.onFinderOpen === "function" ? ui.onFinderOpen() : null;
@@ -1439,6 +1483,7 @@
   };
 
   ui.destroy = function () {
+    window.__FI__.domainBuilder?.close();
     ui.closePanel();
     if (ui.hostEl && ui.hostEl.parentNode) ui.hostEl.parentNode.removeChild(ui.hostEl);
     ui.hostEl = null;

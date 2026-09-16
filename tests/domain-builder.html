@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Domain Builder integration checks</title></head><body>
+<label for="customer">Customer</label><input id="customer" name="customer" value="Alice">
+<pre id="result">RUNNING</pre>
+<script>
+let receiver; const saved = {};
+window.chrome = {runtime: {onMessage: {addListener(fn) {receiver=fn;}}, sendMessage() {}}, storage: {local: {set(data) {Object.assign(saved,data);return Promise.resolve();}}}};
+</script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script>
+<script src="../content/detector.js"></script><script src="../content/ui.js"></script>
+<script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script>
+<script src="../content/content.js"></script>
+<script>
+(async () => {
+const checks=[];
+function check(value, name) {if (!value) throw Error(name); checks.push(name);}
+function message(type, settings) {let response;receiver({type,settings},{},r=>response=r);return response;}
+const {ui, domainBuilder, odoo, utils}=window.__FI__;
+let copied = '', calls = 0;
+utils.copyToClipboard = async text => { copied = text; return true; };
+odoo.detectCurrentModel = () => 'res.partner';
+odoo.call = async (model, method) => {
+  calls++; check(model==='res.partner' && method==='fields_get','Only field metadata is requested');
+  return {name:{string:'Customer Name',type:'char',searchable:true},active:{string:'Active',type:'boolean'},id:{string:'ID',type:'integer'},state:{string:'Status',type:'selection',selection:[['draft','Draft'],['done','Done']]},computed:{string:'Not searchable',type:'char',searchable:false}};
+};
+const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
+function change(el,value) {el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
+message('FI_ENABLE',{odooMode:true});
+ui.finderBtnEl.click();
+check(ui.optionsPanelEl.querySelectorAll('[data-option]').length===7,'Domain Builder appears as seventh option');
+ui.optionsPanelEl.querySelector('[data-option="domain"]').click();
+check(domainBuilder.isOpen() && !ui.isOptionsOpen(),'Domain action opens builder and closes options');
+const panel=ui.shadowRoot.querySelector('.fi-domain-panel');
+const get=selector=>panel.querySelector(selector);
+const action=name=>get(`[data-action="${name}"]`).click();
+const field=()=>get('[data-key="field"]');
+check(get('#fi-domain-model').value==='res.partner','Detected model prefilled');
+check(get('[data-action="copy-python"]').disabled,'Incomplete condition cannot be copied');
+action('load'); await tick();
+check(get('#fi-domain-fields').children.length===4,'Searchable field definitions loaded');
+check(get('#fi-domain-fields').textContent.includes('Customer Name'),'Field labels offered alongside technical names');
+change(field(),'active');
+check(get('[data-key="type"]').value==='boolean' && get('[data-key="value"]').tagName==='SELECT','Boolean field uses typed selector');
+action('copy-python');await tick();check(copied==='[("active", "=", True)]','Python boolean copy');
+action('add');
+const rows=panel.querySelectorAll('[data-rule]');
+change(rows[1].querySelector('[data-key="field"]'),'id');
+let row=panel.querySelectorAll('[data-rule]')[1];
+change(row.querySelector('[data-key="operator"]'),'in');
+row=panel.querySelectorAll('[data-rule]')[1];
+change(row.querySelector('[data-key="value"]'),'[1, 2]');
+change(get('#fi-domain-match'),'any');
+action('copy-json');await tick();
+check(JSON.stringify(JSON.parse(copied))===JSON.stringify(['|',['active','=',true],['id','in',[1,2]]]),'Multiple OR conditions copy correct JSON');
+change(panel.querySelectorAll('[data-rule]')[1].querySelector('[data-key="value"]'),'not a list');
+check(get('[data-action="copy-json"]').disabled && get('#fi-domain-validation').textContent.includes('JSON list'),'Invalid membership blocks copying');
+action('clear');check(get('#fi-domain-preview').textContent==='[]','Clear produces empty domain');
+action('add');change(field(),'state');
+check(get('[data-key="value"]').querySelector('option[value="done"]').textContent.includes('Done'),'Selection field displays labels');
+change(get('[data-key="value"]'),'done');
+action('copy-python');await tick();check(copied==='[("state", "=", "done")]','Selection copies technical key');
+panel.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,composed:true}));
+check(!domainBuilder.isOpen() && ui.shadowRoot.activeElement===ui.finderBtnEl,'Escape closes builder and restores focus');
+domainBuilder.open();check(get('#fi-domain-preview').textContent.includes('done'),'Draft survives close and reopen');
+odoo.call=async()=>{throw Error('Access denied');};action('load');await tick();
+check(get('#fi-domain-status').textContent.includes('Access denied'),'Metadata failure is visible');
+let resolvePending;odoo.call=()=>new Promise(resolve=>{resolvePending=resolve;});action('load');
+message('FI_DISABLE');resolvePending({wrong:{type:'char'}});await tick();
+check(!domainBuilder.isOpen() && ui.finderBtnEl.hidden,'Disable closes builder and hides launcher');
+check(!get('#fi-domain-fields').textContent.includes('wrong'),'Stale response ignored after disable');
+message('FI_ENABLE',{odooMode:false});domainBuilder.open();
+check(get('[data-action="load"]').disabled,'Odoo mode off prevents field loading');
+message('FI_UPDATE_SETTINGS',{copyFormat:'json',odooMode:false});
+check(domainBuilder.isOpen(),'Unrelated settings preserve manual builder');
+action('clear');action('add');change(field(),'name');change(get('[data-key="value"]'),'Manual value');
+action('copy-python');await tick();check(copied.includes('Manual value'),'Manual building works without metadata');
+ui.openOptions();check(!domainBuilder.isOpen(),'Opening options closes builder');
+message('FI_DISABLE');
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

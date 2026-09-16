@@ -1,6 +1,6 @@
 # Privacy Policy — Field Inspector (Odoo Field Inspector)
 
-**Effective date:** 2026-09-16
+**Effective date:** 2026-09-17
 
 This policy covers the "Odoo Field Inspector" Chrome extension ("the
 extension", "Field Inspector"). It's written to be read on its own — you
@@ -24,6 +24,10 @@ your data, though the code is open for inspection in this repository.
   real definition. This request never goes to us or to any third party
   — it goes directly from your browser to the Odoo server you're already
   using.
+- In **Domain Builder**, clicking **Load Fields** while Odoo Developer Mode
+  is on sends the chosen model name to that same Odoo server to fetch field
+  definitions. Domain conditions and values stay in tab memory and are only
+  copied to your clipboard when you choose Copy; they are not sent to Odoo.
 - Your only stored data is your own preference settings (see below),
   kept locally in your browser via `chrome.storage.local`. We never see
   them; they never leave your machine.
@@ -51,7 +55,9 @@ advertising in this extension.
 |---|---|---|---|
 | The clicked field's/column's HTML (tag, attributes, classes, id, current value, etc.) | Whenever you click a detected field while the inspector is enabled | **Nowhere** — rendered entirely inside the extension's own on-page panel, in your browser | Show you the field's structure |
 | A field's technical model + field name (e.g. `res.partner.email`) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field | The **same Odoo server** the current page is already loaded from, over that page's existing logged-in session | Fetch the field's real `ir.model.fields` definition and how it's declared in the current view, so you don't have to guess it from CSS classes |
-| Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off) | Whenever you change a setting in the popup | **Nowhere** — saved only to `chrome.storage.local`, a storage area local to your browser profile | Remember your preferences between sessions |
+| Domain Builder model name | When you click **Load Fields** with Odoo Developer Mode on | The **same Odoo server**, using your existing session | Read field definitions using `fields_get` |
+| Domain Builder conditions and values | When you use the builder | **Nowhere** — tab memory; clipboard only when you choose Copy | Generate a domain locally without applying it to records |
+| Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off) | Whenever you change a setting in the popup or Options menu | **Nowhere** — saved only to `chrome.storage.local`, a storage area local to your browser profile | Remember your preferences between sessions |
 
 No field *values* are ever included in the Odoo lookup — only the
 technical field name and the model name. No page content, browsing
@@ -81,12 +87,15 @@ enable it there.
   clears that cache. Nothing is written to disk beyond your preference
   settings above.
 
+Domain Builder drafts and loaded field definitions also stay in tab memory.
+Reloading, navigating away, or closing the tab clears them.
+
 ## Third parties
 
 We do not share, sell, or transfer any data to third parties, because
-we do not collect any data in the first place. The only outbound
-network request this extension ever makes is the Odoo field-lookup
-call described above, and that request goes directly from your browser
+we do not collect any data in the first place. The outbound
+network requests are the Odoo metadata lookups described above, including
+Domain Builder field definitions, and these go directly from your browser
 to the Odoo server the current page is already on — never to us, and
 never to any third-party analytics, advertising, or data-broker
 service.
