@@ -228,11 +228,11 @@ tool" — most of that traffic never opens the Chrome Web Store first.
 | Asset | Requirement | Status |
 |---|---|---|
 | Store icon | 128×128 PNG | ✅ `icons/icon128.png` (bundled in the package; also upload separately if the dashboard asks) |
-| Screenshot(s) | 1280×800 or 640×400, at least 1, up to 5 | ✅ 3 screenshots at 1280×800, all generated from the real extension (not hand-drawn mockups) |
+| Screenshot(s) | 1280×800 or 640×400, at least 1, up to 5 | ✅ 5 screenshots at 1280×800 (the CWS max), all generated from the real extension (not hand-drawn mockups) |
 | Small promo tile | 440×280 PNG, optional | ✅ `promo/promo_tile_440x280.png` |
 | Marquee | 1400×560 PNG, optional | Not created — optional, only needed if Google features the extension |
 
-Current screenshots (`promo/`):
+Current screenshots (`promo/`), at the CWS's 5-screenshot cap:
 1. `screenshot_1_panel.png` — the tabbed panel's Odoo Field tab on a many2one
    field: model/type/relation, the `many2one` type chip, "Declared In
    Current View", and the "Open in Odoo" link.
@@ -243,12 +243,16 @@ Current screenshots (`promo/`):
    Modes, Odoo Developer Mode) composited into a browser-chrome mockup;
    the popup itself is the real rendered extension UI, only the
    surrounding browser frame/page behind it is illustrative.
+4. `screenshot_4_domain_builder.png` — the Domain Builder with a model's
+   fields loaded and two conditions being combined with AND.
+5. `screenshot_5_chatter_manager.png` — the Chatter Manager reader with
+   loaded messages, an internal note, and the search/filter controls.
 
-All three use a self-contained demo HTML page (fabricated Odoo-style
-markup + fabricated field metadata), not a real Odoo instance or real
-data — safe to regenerate any time after a UI change. Consider swapping
-in 1–2 screenshots from your own live Odoo instance before submitting,
-since only you can log into it.
+All five use a self-contained demo HTML page (fabricated Odoo-style
+markup + fabricated field/model metadata), not a real Odoo instance or
+real data — safe to regenerate any time after a UI change. Since the
+cap is already reached, swapping one of these for a real-Odoo screenshot
+(rather than adding a 6th) is the only way to add one later.
 
 ## Package
 
@@ -270,9 +274,11 @@ and `promo/` are dev-only and intentionally excluded from the package.
    `manifest.json`'s `name` to match before rebuilding the zip.
 3. Load-unpacked test the exact zipped contents one more time (not just
    your working directory) to make sure nothing needed got excluded.
-4. The three `promo/` screenshots are current as of the tabbed-panel,
-   colored type chips, and Field Finder UI. Regenerate them (or add
-   real-Odoo ones) if the panel's look changes again before submitting.
+4. The five `promo/` screenshots are current as of the tabbed-panel,
+   colored type chips, Field Finder, Domain Builder, and Chatter Manager
+   UI. Regenerate them (or swap in real-Odoo ones) if the panel's look
+   changes again before submitting — five is the CWS cap, so a new one
+   means replacing an existing slot, not adding a sixth.
 5. Enable GitHub Pages for `/docs` (see **Privacy practices tab** above)
    and confirm `https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html`
    actually loads before submitting — the submission will be rejected
