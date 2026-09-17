@@ -29,7 +29,7 @@
   "name": "Odoo Field Inspector",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Chrome",
-  "description": "Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition, right on the page.",
+  "description": "Click any Odoo form field or list column to see its technical field name, CSS selector, XPath, and live ir.model.fields definition, right on the page. Also includes a visual Odoo domain builder and a local Chatter Manager for reading, searching, and filtering already-loaded chatter messages.",
   "url": "https://mehedimk.github.io/Odoo-Field-Inspector/",
   "image": "https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg",
   "offers": {
@@ -152,6 +152,8 @@
         <span class="chip">Technical Field Name</span>
         <span class="chip">ir.model.fields</span>
         <span class="chip">Field Finder</span>
+        <span class="chip">Domain Builder</span>
+        <span class="chip">Chatter Manager</span>
       </div>
     </div>
   </div>
@@ -175,6 +177,14 @@
         <p>Search every field and list column on the page by label or technical name, live as you type. Open inside an Odoo wizard and it automatically scopes to just that dialog.</p>
       </div>
       <div class="feature-card">
+        <h3>Visual Domain Builder</h3>
+        <p>Build an Odoo search domain from the model's real fields — labels, types, and selection choices via <code>fields_get</code> — then copy it as a Python domain or JSON. Nothing is applied to records; it only generates the filter text.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Chatter Manager</h3>
+        <p>Hide a form's chatter to reclaim screen space, or expand it into a searchable, filterable reader for already-loaded messages, notes, and tracked field changes — entirely local, no network requests.</p>
+      </div>
+      <div class="feature-card">
         <h3>Form fields and list/table columns</h3>
         <p>Works on standard HTML forms and tables too, not just Odoo — labels, inputs, selects, textareas, ARIA-labelled custom controls, and <code>&lt;th&gt;</code>/grid columns.</p>
       </div>
@@ -184,7 +194,7 @@
       </div>
       <div class="feature-card">
         <h3>Nothing leaves your browser</h3>
-        <p>Except one explicit, toggleable exception: the Odoo field lookup, which asks the same Odoo server you're already logged into — never a third-party server. See the <a href="privacy.html">privacy policy</a>.</p>
+        <p>Except one explicit, toggleable exception: Odoo field/model lookups, which ask the same Odoo server you're already logged into — never a third-party server. See the <a href="privacy.html">privacy policy</a>.</p>
       </div>
     </div>
   </div>
@@ -208,6 +218,16 @@
     <div class="shot">
       <img src="assets/screenshot_3_popup.jpg" alt="Extension popup showing the Enable Inspector toggle and Odoo Developer Mode setting" width="1280" height="800" />
       <div class="shot-caption">The popup: turn the inspector on, choose detection modes, and toggle Odoo Developer Mode.</div>
+    </div>
+
+    <div class="shot">
+      <img src="assets/screenshot_4_domain_builder.jpg" alt="Visual Domain Builder panel with a model's fields loaded and two search conditions being combined" width="1280" height="800" />
+      <div class="shot-caption">Domain Builder: pick fields by label or technical name, combine conditions, and copy the result as a Python domain or JSON.</div>
+    </div>
+
+    <div class="shot">
+      <img src="assets/screenshot_5_chatter_manager.jpg" alt="Chatter Manager panel showing a searchable list of loaded chatter messages and internal notes" width="1280" height="800" />
+      <div class="shot-caption">Chatter Manager: hide or expand a form's chatter, then search and filter its already-loaded messages, notes, and tracked changes.</div>
     </div>
   </div>
 </section>

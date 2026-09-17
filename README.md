@@ -61,16 +61,30 @@ show the field's real, authoritative definition.
   values render as color-coded pills (relational = purple, boolean =
   green, numeric = orange, date/time = teal, selection = pink,
   text-like = blue) so a field's shape is recognizable at a glance.
-- **Field Finder** — a floating search button opens a panel that indexes
-  every field/column on the page (label + technical name) and filters
-  live as you type; click a result to jump straight to its full
-  inspector panel. If an Odoo wizard (dialog) is open, the search is
-  automatically scoped to just that wizard's fields. See
-  [Field Finder](#field-finder) below.
-- **Inspection history, jump-to-element, per-tab copy** — a breadcrumb
-  strip lets you reopen any of your last few inspected fields; a header
-  button scrolls the real page element into view and flashes it; each
-  tab has its own "Copy Tab" button alongside the existing Copy All.
+- **Field Finder** — indexes every field/column on the page (label +
+  technical name) and filters live as you type; click a result to jump
+  straight to its full inspector panel. If an Odoo wizard (dialog) is
+  open, the search is automatically scoped to just that wizard's
+  fields. See [Field Finder](#field-finder) below.
+- **Visual Domain Builder** — compose an Odoo search domain from a
+  model's real fields (labels, types, selection choices, via
+  `fields_get`), combine conditions with AND/OR, and copy the result as
+  a Python domain or JSON. Never applied to records — it only generates
+  the filter text. See [Domain Builder](#domain-builder) below.
+- **Chatter Manager** — hide a form's chatter to reclaim screen space,
+  or expand it into a searchable, filterable local reader for
+  already-loaded messages, internal notes, and tracked field changes.
+  No network requests. See [Chatter Manager](#chatter-manager) below.
+- **Floating Options menu** — a single gear-icon button (bottom-right,
+  while the inspector is enabled) opens Search Fields, Domain Builder,
+  Chatter Manager, Recent Fields, Highlight/Odoo Developer Mode
+  toggles, Copy Current Field, and Disable Inspector — all without
+  opening the popup.
+- **Inspection history, jump-to-element, per-tab copy** — "Recent
+  Fields" in the Options menu lets you reopen any of your last few
+  inspected fields; a header button scrolls the real page element into
+  view and flashes it; each tab has its own "Copy Tab" button alongside
+  the existing Copy All.
 - **Draggable, theme-aware panel** — drag the panel by its header to
   reposition it anywhere on screen; it follows your system's light/dark
   theme automatically.
@@ -85,7 +99,10 @@ chrome-field-inspector/
 │   ├── utils.js             # CSS selector / XPath generators, attribute helpers
 │   ├── odoo.js              # Odoo model detection + live ir.model.fields RPC lookup
 │   ├── detector.js         # Field/column detection, classification, MutationObserver
-│   ├── ui.js                # Shadow DOM inspector panel (render + copy logic)
+│   ├── ui.js                # Shadow DOM inspector panel (tabs, Options menu, Field Finder)
+│   ├── domain.js            # Odoo domain serialization/validation (no eval, no RPC)
+│   ├── domain-builder.js   # Domain Builder UI, built on domain.js + ui.js's Shadow DOM
+│   ├── chatter.js           # Chatter Manager: local reader, no RPC calls
 │   └── content.js          # Orchestrator: event delegation, message handling
 ├── content.css             # Page-level highlight styles (scoped, !important, outline-only)
 ├── popup/
@@ -95,6 +112,11 @@ chrome-field-inspector/
 ├── icons/
 │   ├── icon16.png / icon32.png / icon48.png / icon128.png
 │   └── icon.svg            # Vector source for the icons above (dev-only)
+├── tests/                  # Dev-only: not packaged, not referenced by manifest.json
+│   ├── domain.test.cjs       # node --test unit tests for content/domain.js
+│   ├── run-browser-tests.cjs # Drives the two fixtures below via headless Chrome --dump-dom
+│   ├── domain-builder.html   # Domain Builder integration fixture + assertions
+│   └── chatter.html          # Chatter Manager integration fixture + assertions
 ├── docs/                   # GitHub Pages site: landing page + hosted privacy policy
 │   ├── index.html            # SEO landing page (Open Graph, JSON-LD, screenshots)
 │   ├── privacy.html          # Rendered copy of PRIVACY_POLICY.md, for a stable public URL
@@ -102,18 +124,26 @@ chrome-field-inspector/
 │   └── assets/                # Images used only by the pages above
 ├── README.md
 ├── PRIVACY_POLICY.md       # Full privacy policy (dev-only, see below)
-└── STORE_LISTING.md        # Chrome Web Store submission copy (dev-only)
+├── STORE_LISTING.md        # Chrome Web Store submission copy (dev-only)
+└── CHECKLIST_README.md     # Internal pre-publication checklist (dev-only)
 ```
 
-`README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `icons/icon.svg`,
-`docs/`, and `promo/` (screenshot sources) are documentation/dev assets —
-none of them are referenced by `manifest.json`, so none of them are
-included in the packaged `.zip` uploaded to the Chrome Web Store.
-`docs/` is served separately, as a GitHub Pages site (see
-[`STORE_LISTING.md`](STORE_LISTING.md) for the exact steps to enable it) —
-it's the extension's public landing page and the hosted URL for its
+`README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `CHECKLIST_README.md`,
+`icons/icon.svg`, `tests/`, `docs/`, and `promo/` (screenshot sources) are
+documentation/dev assets — none of them are referenced by `manifest.json`,
+so none of them are included in the packaged `.zip` uploaded to the
+Chrome Web Store. `docs/` is served separately, as a GitHub Pages site
+(see [`STORE_LISTING.md`](STORE_LISTING.md) for the exact steps to enable
+it) — it's the extension's public landing page and the hosted URL for its
 privacy policy, not something a Chrome user ever loads as part of the
 extension itself.
+
+Run the test suite with:
+
+```sh
+node --test tests/domain.test.cjs   # pure-logic unit tests
+node tests/run-browser-tests.cjs    # headless-Chrome integration checks (needs google-chrome or $CHROME_BIN)
+```
 
 ## Architecture
 
