@@ -2,6 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VRFKFLKLFT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VRFKFLKLFT');
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Privacy Policy — Odoo Field Inspector</title>
 <meta name="description" content="Privacy policy for the Odoo Field Inspector Chrome extension: what data it reads, what it sends (only to your own Odoo server, only with Odoo Developer Mode on), and what it never collects." />
@@ -52,14 +61,16 @@
 <div class="wrap">
   <p class="eyebrow"><a href="index.html">&larr; Odoo Field Inspector</a></p>
   <h1>Privacy Policy</h1>
-  <p class="effective">Effective date: 2026-09-17</p>
+  <p class="effective">Effective date: 2026-09-18</p>
 
   <p>This policy covers the "Odoo Field Inspector" Chrome extension ("the extension", "Field Inspector"). It's written to be read on its own — you don't need to read the source code to know what this extension does with your data, though the code is open for inspection in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>.</p>
+
+  <p><strong>Documentation website analytics:</strong> This website, including this privacy page, uses Google Analytics (measurement ID <code>G-VRFKFLKLFT</code>) to measure visits and usage. The Google Analytics tag runs on the documentation website only. The extension data practices described below apply to the Chrome extension.</p>
 
   <div class="summary-box">
     <h2 style="margin-top:0;">Summary</h2>
     <ul>
-      <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and we have no analytics, telemetry, or crash-reporting of any kind.</li>
+      <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and the extension has no analytics, telemetry, or crash-reporting of any kind.</li>
       <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name only</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
       <li>In <strong>Domain Builder</strong>, clicking <strong>Load Fields</strong> with Odoo Developer Mode on sends the chosen model name to the same Odoo server to read field definitions. Domain conditions and values stay in tab memory and are copied to your clipboard only when you choose Copy; they are not sent to Odoo.</li>
       <li>Your only stored data is your own preference settings, kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
