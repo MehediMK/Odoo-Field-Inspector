@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VRFKFLKLFT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VRFKFLKLFT');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>User Guide — Odoo Field Inspector: Every Feature Explained with Screenshots</title>
+<meta name="description" content="Step-by-step user guide for the Odoo Field Inspector Chrome extension: inspect form fields and list columns, read CSS selectors and XPath, use Field Finder, Button inspector, View Stack, Domain Builder, Chatter Manager, the Settings tab, auto-enable sites and debug mode — each feature shown with a screenshot." />
+<link rel="canonical" href="https://mehedimk.github.io/Odoo-Field-Inspector/guide.html" />
+<link rel="icon" type="image/png" href="assets/icon128.png" />
+<meta name="robots" content="index, follow" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Odoo Field Inspector" />
+<meta property="og:title" content="User Guide — Odoo Field Inspector: Every Feature Explained with Screenshots" />
+<meta property="og:description" content="Step-by-step user guide for the Odoo Field Inspector Chrome extension: field inspection, selectors, Field Finder, buttons, View Stack, Domain Builder, Chatter Manager, settings, auto-enable and debug — with screenshots." />
+<meta property="og:url" content="https://mehedimk.github.io/Odoo-Field-Inspector/guide.html" />
+<meta property="og:image" content="https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="User Guide — Odoo Field Inspector: Every Feature Explained with Screenshots" />
+<meta name="twitter:description" content="Step-by-step user guide for the Odoo Field Inspector Chrome extension, with a screenshot for every functionality." />
+<meta name="twitter:image" content="https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "User Guide — Odoo Field Inspector: Every Feature Explained with Screenshots",
+  "description": "Step-by-step user guide for the Odoo Field Inspector Chrome extension: field inspection, CSS selectors and XPath, Field Finder, Button inspector, View Stack, Domain Builder, Chatter Manager, settings tab, auto-enable sites and debug mode.",
+  "url": "https://mehedimk.github.io/Odoo-Field-Inspector/guide.html",
+  "image": "https://mehedimk.github.io/Odoo-Field-Inspector/assets/og-image.jpg",
+  "author": { "@type": "Person", "name": "MehediMK" },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Odoo Field Inspector",
+    "url": "https://mehedimk.github.io/Odoo-Field-Inspector/"
+  },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "https://mehedimk.github.io/Odoo-Field-Inspector/guide.html" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does it work on pages that are not Odoo?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. On any web page the panel shows the HTML facts of a clicked form field or table column — element, type, id, name, classes, placeholder, state, CSS selector and XPath. The Odoo-specific sections (ir.model.fields definition, view XML IDs, version deep links, buttons, Domain Builder field loading) only appear on pages served by Odoo, and only when Odoo Developer Mode is on." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can clicking a field change my form data?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. Intercept clicks is on out of the box: the click is caught before the page sees it, so checkboxes never toggle, dropdowns never open and no value changes. You can deliberately switch to click-through mode if you want to keep editing the form while inspecting it." }
+    },
+    {
+      "@type": "Question",
+      "name": "Where does the Odoo field information come from?",
+      "acceptedAnswer": { "@type": "Answer", "text": "From your own Odoo server. With Odoo Developer Mode on, the extension sends only the model name and technical field name to the same server the page is already open on, using your existing logged-in session, and shows the definition returned by ir.model.fields. Field values are never sent, nothing goes to a third party, and you can turn the mode off at any time." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which Odoo versions are supported?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The panel reads your server's version (for example 16.0 or 17.0) and adapts: the \"Open in Odoo\" deep link uses the legacy /web#model= hash style on 16 and earlier and the /odoo/action- route on 17 and later, and Odoo Online build strings are handled too. When the version cannot be read, both link styles are offered with an explanation instead of a silent guess." }
+    },
+    {
+      "@type": "Question",
+      "name": "Where are my settings stored?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Locally, in chrome.storage.local inside your browser profile — including the optional list of sites you chose to auto-enable on. Nothing is transmitted to us or to anyone else. Removing the extension clears that storage." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Odoo Field Inspector free and open source?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free to install from the Chrome Web Store and the full source code is published on GitHub, so the privacy claims in this guide can be verified against the code." }
+    }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e14;
+    --bg-panel: #14161f;
+    --fg: #f5f3ff;
+    --fg-muted: #a1a8bb;
+    --fg-body: #d7d9e6;
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --border: #262b3a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  }
+  img { max-width: 100%; display: block; }
+  a { color: var(--accent-2); }
+  code { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.9em; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---- shared sticky site navigation ---- */
+  .site-nav {
+    position: sticky; top: 0; z-index: 60;
+    background: rgba(11, 14, 20, 0.85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 0; }
+  .nav-brand {
+    display: flex; align-items: center; gap: 9px;
+    font-weight: 800; font-size: 15px; color: var(--fg); text-decoration: none; letter-spacing: -0.01em;
+  }
+  .nav-brand img { border-radius: 7px; }
+  .nav-brand:hover { color: var(--accent-2); }
+  .nav-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-left: auto; }
+  .nav-links a {
+    color: var(--fg-muted); text-decoration: none; font-size: 14px; font-weight: 600;
+    padding: 7px 11px; border-radius: 8px;
+  }
+  .nav-links a:hover { color: var(--fg); background: rgba(167, 139, 250, 0.12); }
+  .nav-links a[aria-current="page"] { color: var(--accent-2); background: rgba(167, 139, 250, 0.16); }
+  .nav-links a.nav-cta { color: #1a1030; background: var(--accent); font-weight: 700; margin-left: 6px; }
+  .nav-links a.nav-cta:hover { background: var(--accent-2); color: #1a1030; }
+
+  /* ---- guide hero ---- */
+  .guide-hero {
+    background: radial-gradient(circle at 85% -20%, rgba(167,139,250,0.22) 0%, rgba(167,139,250,0) 55%), var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 42px 0 34px;
+  }
+  .eyebrow {
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-muted); margin: 0 0 10px;
+  }
+  .guide-hero h1 { font-size: clamp(26px, 4.5vw, 40px); line-height: 1.14; margin: 0 0 12px; }
+  .guide-hero h1 .accent { color: var(--accent-2); }
+  .guide-hero .tagline { font-size: 17px; color: var(--fg-muted); margin: 0 0 20px; max-width: 780px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 14.5px;
+    text-decoration: none; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: #1a1030; }
+  .btn-primary:hover { background: var(--accent-2); }
+  .btn-secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent-2); }
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .chip {
+    font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+    background: rgba(167,139,250,0.14); color: var(--accent-2); border: 1px solid rgba(167,139,250,0.28);
+  }
+
+  /* ---- two-column layout: table of contents + content ---- */
+  .layout {
+    max-width: 1180px; margin: 0 auto; padding: 0 20px 50px;
+    display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 44px; align-items: start;
+  }
+  .toc { position: sticky; top: 70px; padding-top: 30px; }
+  .toc-box {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px;
+    max-height: calc(100vh - 100px); overflow-y: auto;
+  }
+  .toc-box summary {
+    font-size: 11.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--fg-muted); cursor: pointer; padding: 2px 8px 9px; list-style: none;
+  }
+  .toc-box summary::-webkit-details-marker { display: none; }
+  .toc-box nav a {
+    display: block; padding: 6px 9px; font-size: 13.5px; color: var(--fg-muted);
+    text-decoration: none; border-radius: 7px; line-height: 1.4;
+  }
+  .toc-box nav a:hover { color: var(--fg); background: rgba(167, 139, 250, 0.1); }
+  .toc-box nav a.on { color: var(--accent-2); background: rgba(167, 139, 250, 0.15); font-weight: 700; }
+
+  .guide-main { min-width: 0; padding-top: 28px; }
+  section.gsec { scroll-margin-top: 84px; padding: 30px 0 6px; border-top: 1px solid var(--border); }
+  section.gsec:first-of-type { border-top: none; padding-top: 6px; }
+  .gsec h2 { font-size: 23px; margin: 0 0 6px; line-height: 1.25; }
+  .gsec h2 .num {
+    display: inline-block; font-size: 12px; font-weight: 800; color: var(--fg-muted);
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 7px; margin-right: 8px; vertical-align: 3px;
+  }
+  .gsec h3 { font-size: 16.5px; margin: 24px 0 6px; }
+  .gsec p, .gsec li { color: var(--fg-body); font-size: 15px; }
+  .gsec .lead { color: var(--fg-muted); margin: 0 0 14px; max-width: 74ch; }
+  .gsec ul, .gsec ol { padding-left: 20px; margin: 10px 0 16px; }
+  .gsec li { margin: 7px 0; }
+  .gsec li strong, .gsec p strong { color: var(--fg); }
+
+  .callout {
+    background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 13px 16px; margin: 16px 0; font-size: 14.5px; color: var(--fg-body);
+  }
+  .callout strong { color: var(--fg); }
+
+  .steps { padding-left: 20px; margin: 12px 0 18px; }
+  .steps li { margin-bottom: 9px; color: var(--fg-muted); }
+  .steps li strong { color: var(--fg); }
+
+  /* ---- screenshots ---- */
+  .shot {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    margin: 16px 0 18px; background: var(--bg-panel);
+  }
+  .shot img { width: 100%; height: auto; }
+  .shot.natural { max-width: 100%; margin-left: auto; margin-right: auto; }
+  .shot.natural img { width: 100%; height: auto; }
+  .shot-caption { padding: 11px 15px; font-size: 13.5px; color: var(--fg-muted); background: var(--bg-panel); border-top: 1px solid var(--border); overflow-wrap: break-word; }
+  .shot-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; align-items: start; margin: 16px 0 6px; }
+  .shot-pair .shot { margin: 0; }
+  .shot-pair .shot.natural { justify-self: center; }
+
+  .panel-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin: 16px 0 6px; }
+  .panel-row .shot { margin: 0; }
+  .panel-row > .shot:not(.natural) { flex: 1 1 360px; min-width: 0; }
+
+  /* ---- FAQ ---- */
+  .faq-item {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin: 12px 0;
+  }
+  .faq-item h3 { margin: 0 0 7px; font-size: 16px; color: var(--fg); }
+  .faq-item p { margin: 0; font-size: 14.5px; color: var(--fg-body); }
+
+  footer { padding: 30px 0 46px; border-top: 1px solid var(--border); margin-top: 36px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--fg-muted); font-size: 13.5px; }
+  footer a { color: var(--fg-muted); }
+  footer a:hover { color: var(--accent-2); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    .toc { position: static; padding-top: 22px; }
+    .guide-main { padding-top: 18px; }
+    .nav-links { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="site-nav" aria-label="Site">
+  <div class="wrap nav-inner">
+    <a class="nav-brand" href="index.html"><img src="assets/icon128.png" alt="" width="26" height="26" /><span>Odoo&nbsp;Field&nbsp;Inspector</span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="guide.html" aria-current="page">User Guide</a>
+      <a href="index.html#screenshots">Screenshots</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub</a>
+      <a class="nav-cta" href="https://chromewebstore.google.com/detail/eofdcaodbfhimfnipomdfpnmhicdifaf?utm_source=item-share-cb">Get&nbsp;extension</a>
+    </div>
+  </div>
+</nav>
+
+<header class="guide-hero">
+  <div class="wrap">
+    <p class="eyebrow">Documentation &middot; User guide</p>
+    <h1>How to use <span class="accent">Odoo Field Inspector</span></h1>
+    <p class="tagline">Every functionality of the extension, in the order you'll meet it: switching it on, reading a field, copying a selector, inspecting buttons and views, searching the page, building domains, managing chatter, and tuning the settings — each one shown with a screenshot from the real extension.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/eofdcaodbfhimfnipomdfpnmhicdifaf?utm_source=item-share-cb">Get Chrome Extension</a>
+      <a class="btn btn-secondary" href="index.html">Overview</a>
+      <a class="btn btn-secondary" href="privacy.html">Privacy Policy</a>
+    </div>
+    <div class="chip-row">
+      <span class="chip">CSS Selector</span>
+      <span class="chip">XPath</span>
+      <span class="chip">Technical Field Name</span>
+      <span class="chip">Field Finder</span>
+      <span class="chip">Button Inspector</span>
+      <span class="chip">View Stack</span>
+      <span class="chip">Domain Builder</span>
+      <span class="chip">Chatter Manager</span>
+      <span class="chip">Settings Tab</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="toc">
+    <details class="toc-box" open>
+      <summary>On this page</summary>
+      <nav aria-label="User guide table of contents">
+        <a href="#quick-start">1. Quick start</a>
+        <a href="#inspect">2. Inspect a form field</a>
+        <a href="#field-info">3. Field Info &amp; Selectors</a>
+        <a href="#columns">4. List columns &amp; cells</a>
+        <a href="#copy">5. Copying values</a>
+        <a href="#finder">6. Field Finder</a>
+        <a href="#buttons">7. Button inspector</a>
+        <a href="#view-stack">8. View Stack &amp; deep links</a>
+        <a href="#sensitive">9. Click safety &amp; redaction</a>
+        <a href="#domain">10. Domain Builder</a>
+        <a href="#chatter">11. Chatter Manager</a>
+        <a href="#options">12. Options menu &amp; history</a>
+        <a href="#appearance">13. Appearance</a>
+        <a href="#settings">14. Settings tab</a>
+        <a href="#sites">15. Auto-enable sites</a>
+        <a href="#debug">16. Debug mode</a>
+        <a href="#privacy">17. Privacy</a>
+        <a href="#faq">18. FAQ</a>
+      </nav>
+    </details>
+  </aside>
+
+  <main class="guide-main">
+
+    <section class="gsec" id="quick-start">
+      <h2><span class="num">01</span>Quick start</h2>
+      <p class="lead">Install the extension, turn it on once, and you're inspecting. Everything below assumes that first step is done.</p>
+      <ol class="steps">
+        <li><strong>Install</strong> — get it from the <a href="https://chromewebstore.google.com/detail/eofdcaodbfhimfnipomdfpnmhicdifaf?utm_source=item-share-cb">Chrome Web Store</a>, or build from source: clone the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>, open <strong>chrome://extensions</strong>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong> and pick the folder.</li>
+        <li><strong>Open the popup</strong> — click the Field Inspector icon in the toolbar (pin it first if you like).</li>
+        <li><strong>Toggle <em>Enable Inspector</em></strong> on. Detected fields get a subtle dashed outline on the page.</li>
+        <li><strong>Click any field's label</strong> (or a table column header) — the inspector panel slides in on the right.</li>
+        <li><strong>Toggle it off</strong> in the popup whenever you're done; normal page behaviour is fully restored.</li>
+      </ol>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:422px;">
+          <img src="assets/screenshot_8_popup_settings.jpg" alt="Popup in dark theme with pink accent showing the Enable Inspector toggle, All settings button and the quick settings" width="420" height="780" />
+          <figcaption class="shot-caption">The popup: <strong>Enable Inspector</strong> at the top, the quick settings under it, and <strong>All settings</strong> for everything else.</figcaption>
+        </figure>
+        <div style="flex:1 1 320px; min-width:280px;">
+          <p style="margin-top:0;">The popup is deliberately small — just what you reach for constantly:</p>
+          <ul>
+            <li><strong>Enable Inspector</strong> — the one toggle for the current tab.</li>
+            <li><strong>Detection modes</strong> — Form View and List View, so you can inspect only what you need.</li>
+            <li><strong>Highlight detected fields</strong> — the dashed outlines on the page.</li>
+            <li><strong>Copy format</strong> — Plain text or JSON for Copy All.</li>
+            <li><strong>Odoo Developer Mode</strong>, <strong>Show sensitive values</strong> and <strong>Intercept clicks</strong> — the three switches you'll occasionally flip mid-task.</li>
+            <li><strong>All settings</strong> — opens the complete settings page in its own tab (see <a href="#settings">section&nbsp;14</a>).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout"><strong>Nothing to configure first.</strong> Out of the box the inspector is safe to click around with: clicks are intercepted so no form value can change, sensitive values stay redacted, and no network request is made until you deliberately use an Odoo feature.</div>
+    </section>
+
+    <section class="gsec" id="inspect">
+      <h2><span class="num">02</span>Inspect a form field</h2>
+      <p class="lead">Click a field's label, the input itself, a checkbox, a select, a textarea, a <code>contenteditable</code> region or an ARIA-labelled custom control. The panel opens with one tab per category of information, styled like Odoo's own notebook.</p>
+
+      <ul>
+        <li><strong>Odoo Field tab</strong> (on Odoo pages, with Odoo Developer Mode on) leads with the live definition: the model, ORM type as a colour-coded pill, relation, required / readonly / stored state, help text, the selection options decoded to labels, and how the field is declared in the current view — <code>widget=</code>, <code>domain=</code>, <code>context=</code>, <code>invisible=</code> and friends.</li>
+        <li><strong>Server Version</strong> is read once per tab (for example <code>17.0</code>) and shown in the same tab, feeding the version-correct deep links described in <a href="#view-stack">section&nbsp;8</a>.</li>
+        <li>Below the definition you get the field's <strong>State</strong>, its <strong>selectors</strong>, and a ready-to-paste <strong>view XML snippet</strong> — <code>&lt;field name="email"/&gt;</code> — plus a direct <strong>Open in Odoo</strong> link to the field's own admin record under Settings&nbsp;→&nbsp;Technical&nbsp;→&nbsp;Fields.</li>
+        <li>The <strong>history chips</strong> right under the panel header are the last fields you inspected — click one to jump straight back to it without touching the page.</li>
+        <li><strong>Move the panel</strong> by dragging its header, jump to the real element with the crosshair button (it scrolls the page and flashes the field), and close it with <strong>×</strong>, <strong>Esc</strong>, or a click anywhere outside the panel.</li>
+      </ul>
+
+      <figure class="shot">
+        <img src="assets/screenshot_1_panel.jpg" alt="Inspector panel open on a Country field showing model, ORM type, relation, view-level attributes and a link to the field's admin record" width="1280" height="800" />
+        <figcaption class="shot-caption">The Odoo Field tab: live <code>ir.model.fields</code> data, how the field is declared in the current view, and where to click through to its admin record.</figcaption>
+      </figure>
+
+      <p>On plain HTML pages (no Odoo), the same click gives you the <strong>Field Info</strong>, <strong>State</strong> and <strong>Selectors</strong> tabs instead — covered next.</p>
+    </section>
+
+    <section class="gsec" id="field-info">
+      <h2><span class="num">03</span>Field Info &amp; Selectors — CSS selector and XPath</h2>
+      <p class="lead">Two tabs answer the two questions developers ask most: <em>what is this element?</em> and <em>how do I address it in a script?</em></p>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:402px;">
+          <img src="assets/screenshot_16_field_info.jpg" alt="Field Info tab showing field label, HTML element INPUT, field type, input type email, id, name attribute and CSS classes" width="400" height="505" />
+          <figcaption class="shot-caption"><strong>Field Info</strong> — label, element, type, id, name, classes, placeholder.</figcaption>
+        </figure>
+        <figure class="shot natural" style="width:402px;">
+          <img src="assets/screenshot_17_selectors.jpg" alt="Selectors tab with a copyable CSS selector and XPath for the inspected field" width="400" height="365" />
+          <figcaption class="shot-caption"><strong>Selectors</strong> — the shortest unique CSS selector and XPath, each with its own copy button.</figcaption>
+        </figure>
+      </div>
+
+      <ul>
+        <li><strong>Unique by construction.</strong> Both values are generated so they resolve back to exactly this element — no guessing at brittle class chains for your test script or bookmarklet.</li>
+        <li><strong>Odoo View XPath.</strong> When the selector resolves into Odoo view XML, the panel relabels the value <em>Odoo View XPath</em> and adds a hint about scoping it to the field's parent when it appears more than once in the view.</li>
+        <li>More attribute groups — <strong>Validation</strong>, <strong>Data Attrs</strong>, <strong>ARIA Attrs</strong>, <strong>Other Attrs</strong> — appear as their own tabs whenever the element has them.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="columns">
+      <h2><span class="num">04</span>List columns &amp; data cells</h2>
+      <p class="lead">Tables and grids get the same treatment: click a column header (<code>&lt;th&gt;</code> or <code>role="columnheader"</code>) or any plain data cell.</p>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:393px;">
+          <img src="assets/screenshot_19_column_info.jpg" alt="Column Info tab for a list column showing column name, element type TH, column index and tabs for Selectors, Table and Data Attributes" width="391" height="550" />
+          <figcaption class="shot-caption"><strong>Column Info</strong> — column name, element type, index, id/name/classes, plus Selectors, Table and attribute tabs.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/screenshot_11_list_view.jpg" alt="Panel on a list data cell showing the list view's XML ID sale.view_order_tree in the View Stack" width="1440" height="1060" />
+          <figcaption class="shot-caption">On an Odoo list, a data cell reports the model and the <strong>list view's</strong> own XML ID — <code>sale.view_order_tree</code>, not the form view.</figcaption>
+        </figure>
+      </div>
+
+      <ul>
+        <li><strong>Headers</strong> describe the column itself: name, position, and a <strong>Table</strong> tab with the parent table/grid's size and identity.</li>
+        <li><strong>Data cells</strong> add the row/column position and the cell's text; on an Odoo list they trigger the <em>same live field lookup</em> as a form field, and the panel reports the <strong>list view's</strong> XML ID — not the form view's.</li>
+        <li>Where the column renders an input, a <strong>Sample Input</strong> tab shows the control used in that column.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="copy">
+      <h2><span class="num">05</span>Copying values</h2>
+      <p class="lead">Everything the panel shows is copyable, in three granularities.</p>
+      <ul>
+        <li><strong>Per-row copy buttons</strong> — every selector, XPath, value and snippet has a 📋 button beside it for just that one value.</li>
+        <li><strong>📋 Copy Tab</strong> (top-right of every tab) copies everything currently visible in that tab as <code>Label: value</code> lines — ideal for pasting a bug report.</li>
+        <li><strong>Copy All Information</strong> (the bar at the bottom of the panel) copies the entire panel — all tabs at once — in the format you chose in <strong>Copy format</strong>: <em>Plain text</em> or <em>JSON</em>. The same choice drives the popup's quick setting and the Settings tab.</li>
+        <li>Redaction travels with the copy: secret-named field values are replaced with a redaction marker in every output unless you turn on <em>Show sensitive values</em> (see <a href="#sensitive">section&nbsp;9</a>).</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="finder">
+      <h2><span class="num">06</span>Field Finder — search the whole page</h2>
+      <p class="lead">Rather than clicking around, open the Field Finder and search every field and column on the page at once — by label or by technical name, live as you type.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_2_finder.jpg" alt="Field Finder search panel listing every detected form field and list column with its technical name" width="1280" height="800" />
+        <figcaption class="shot-caption">Field Finder: every detected field and column, filterable in real time; click a result to open its full inspector panel.</figcaption>
+      </figure>
+
+      <ul>
+        <li>Open it from the <strong>Options menu → Search Fields</strong> (see <a href="#options">section&nbsp;12</a>).</li>
+        <li>Results show the human label and, when known, the Odoo technical name — so you can search <code>partner_id</code> or <em>Customer</em> and get the same row.</li>
+        <li>If an Odoo <strong>wizard (dialog)</strong> is open, the search automatically scopes to just that dialog's fields, so the surrounding form doesn't drown out the dialog you're actually working in.</li>
+        <li>Picking a result selects it without touching the page — this is also one of the two safe ways to inspect a <button>Save</button> button (see <a href="#buttons">section&nbsp;7</a>).</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="buttons">
+      <h2><span class="num">07</span>Button inspector — what will this button actually do?</h2>
+      <p class="lead">A dedicated <strong>Button</strong> tab tells you what an Odoo button will do before anyone presses it.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_9_button_inspector.jpg" alt="Button inspector panel showing a Save button's Python method, action and target record" width="1440" height="900" />
+        <figcaption class="shot-caption">The Button tab: the Python method the button calls, the action it opens, its <code>special=</code> and <code>confirm=</code>, and the record it would act on.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Method</strong> — the Python method invoked (e.g. <code>action_save</code>), or the <strong>Action</strong> it opens instead.</li>
+        <li><strong><code>special=</code></strong> built-ins (<code>save</code>, <code>cancel</code>, <code>new</code> …) and <strong><code>confirm=</code></strong> the confirmation text it asks for first.</li>
+        <li><strong>Record</strong> — the model and id the button would act on, as declared in the view.</li>
+        <li><strong>Buttons are never hijacked.</strong> A normal click on Save/Delete stays a real button click, because intercepting it could corrupt a workflow. Inspect buttons in exactly two ways: turn <strong>Intercept clicks</strong> off and click it (click-through mode), or pick it in the <strong>Field Finder</strong> — which selects it without pressing it at all.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="view-stack">
+      <h2><span class="num">08</span>View Stack &amp; version-correct deep links</h2>
+      <p class="lead">A rendered Odoo page is the merge of a whole inheritance stack. The panel resolves which view you're really looking at — and links you to each layer.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_10_view_stack.jpg" alt="Resolved View Stack showing the active view's XML ID, its inherited parent chain and links into Odoo Technical Views" width="1440" height="1060" />
+        <figcaption class="shot-caption">View Stack: the active view's XML ID, the chain it inherits from, and an <strong>Open in Odoo</strong> link for each layer straight into Technical&nbsp;→&nbsp;Views.</figcaption>
+      </figure>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:396px;">
+          <img src="assets/screenshot_13_odoo_version_link.jpg" alt="Server Version 17.0 and a version-correct Open in Odoo deep link in the panel" width="394" height="505" />
+          <figcaption class="shot-caption">The server's own version drives the link style.</figcaption>
+        </figure>
+        <div style="flex:1 1 320px; min-width:280px;">
+          <ul style="margin-top:0;">
+            <li><strong>Version detection.</strong> The panel reads one fixed configuration key from your server, at most once per tab, and shows the version (<code>16.0</code>, <code>17.0</code>, an Odoo Online build string …).</li>
+            <li><strong>Version-correct links.</strong> On 16 and earlier the deep link uses the legacy <code>/web#model=…&amp;id=…</code> hash; on 17 and later it uses the <code>/odoo/action-…</code> route. If the version can't be read, both styles are offered with an explanation — never a silent guess.</li>
+            <li><strong>View metadata only.</strong> The extension resolves view <em>identities</em> — ids and their XML IDs. It never downloads a view's source XML (<code>arch_db</code>) and reads no record data through them.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="gsec" id="sensitive">
+      <h2><span class="num">09</span>Click safety &amp; sensitive-value redaction</h2>
+      <p class="lead">The two defaults that make the inspector safe to use on production forms.</p>
+
+      <h3>Intercept clicks (on by default)</h3>
+      <ul>
+        <li>Clicks on detected fields are caught <strong>before the page sees them</strong>: no checkbox toggles, no dropdown opens, no value or focus state changes. The panel opens; the form doesn't move.</li>
+        <li>Turn <strong>Intercept clicks</strong> off (popup, Settings tab, or the Options menu) for <strong>click-through mode</strong>: the panel still opens, but the click also reaches the page, so you can keep editing the form while inspecting it. This mode <em>can</em> change form data — that's your explicit choice, not the default.</li>
+        <li>Disabling the inspector restores completely normal page behaviour, outlines and all.</li>
+      </ul>
+
+      <h3>Show sensitive values (off by default)</h3>
+      <figure class="shot">
+        <img src="assets/screenshot_12_password_redacted.jpg" alt="State tab of a password field with its value redacted, next to an explanation of the redaction" width="1440" height="900" />
+        <figcaption class="shot-caption">A password field's value is replaced with a redaction marker — in the panel, in Copy All, in JSON output and in the history — until you deliberately turn on <em>Show sensitive values</em>.</figcaption>
+      </figure>
+      <ul>
+        <li>Password inputs, hidden token/CSRF fields and other secret-named fields are detected and redacted <strong>everywhere the value could surface</strong>.</li>
+        <li>The toggle lives in the popup, the Settings tab and the Options menu, and applies live — you never have to reopen the panel.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="domain">
+      <h2><span class="num">10</span>Domain Builder — visual Odoo domains</h2>
+      <p class="lead">Compose a search domain from the model's real fields, combine conditions, copy the result. Nothing is applied to records — it only generates the filter text.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_4_domain_builder.jpg" alt="Visual Domain Builder with model fields loaded and two conditions being combined into a domain" width="1280" height="800" />
+        <figcaption class="shot-caption">Domain Builder: pick fields by label or technical name, choose operators, combine conditions with AND/OR, copy as a Python domain or JSON.</figcaption>
+      </figure>
+
+      <ul>
+        <li>Open it from the <strong>Options menu → Domain Builder</strong>.</li>
+        <li><strong>Load Fields</strong> asks your Odoo server (<code>fields_get</code>) — with Odoo Developer Mode on — so you pick from real labels, types and selection choices instead of typing blind.</li>
+        <li>Conditions and values stay in <strong>tab memory</strong>; they reach the clipboard only when you choose Copy, and are never sent anywhere else.</li>
+        <li>Copy as a <strong>Python domain</strong> (<code>[('stage_id', '=', 'won')]</code>) or <strong>JSON</strong> — paste into a test, an <code>ir.actions.act_window</code> domain field, or a server action.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="chatter">
+      <h2><span class="num">11</span>Chatter Manager — read and search the chatter</h2>
+      <p class="lead">Reclaim screen space, or turn an already-loaded chatter into a searchable reader. Entirely local — no network requests.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_5_chatter_manager.jpg" alt="Chatter Manager showing a searchable list of loaded chatter messages and internal notes" width="1280" height="800" />
+        <figcaption class="shot-caption">Chatter Manager: hide the chatter to reclaim space, or expand it to search and filter loaded messages, notes and tracked field changes.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Hide</strong> a form's chatter with one click while you work on the fields; disabling inspection puts the layout back.</li>
+        <li><strong>Expand</strong> it into a reader over messages <em>already loaded in the page</em> — search and filter by content, message type and author.</li>
+        <li>Covers messages, internal notes, and <strong>tracked field changes</strong> (the "Field X was modified" entries).</li>
+        <li>Everything stays in the tab: nothing is fetched, nothing is stored, and composer drafts are never read.</li>
+        <li>The menu entry appears only when the current form actually has a chatter.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="options">
+      <h2><span class="num">12</span>Options menu &amp; Recent Fields</h2>
+      <p class="lead">While the inspector is enabled, a small floating gear sits at the bottom-right of the page. It's the hub for everything — no popup round-trip needed.</p>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:282px;">
+          <img src="assets/screenshot_18_options_menu.jpg" alt="Floating options menu with entries for Search Fields, Domain Builder, Recent Fields and toggles for highlight, Odoo mode, sensitive values and intercept clicks" width="280" height="590" />
+          <figcaption class="shot-caption">The Options menu, opened from the floating gear at the bottom-right.</figcaption>
+        </figure>
+        <div style="flex:1 1 320px; min-width:280px;">
+          <ul>
+            <li><strong>Search Fields</strong> — the Field Finder (<a href="#finder">section&nbsp;6</a>).</li>
+            <li><strong>Domain Builder</strong> / <strong>Chatter Manager</strong> — the tools from sections <a href="#domain">10</a> and <a href="#chatter">11</a>.</li>
+            <li><strong>Recent Fields</strong> — reopen any of your last inspected fields; the panel's header chips do the same in one click.</li>
+            <li><strong>Instant toggles</strong> — Highlight Fields, Odoo Developer Mode, Show Sensitive Values and Intercept Clicks, each showing its current state.</li>
+            <li><strong>Copy Current Field</strong> — one-click copy of whatever is inspected, without touching the panel.</li>
+            <li><strong>Settings · Theme &amp; Colors</strong> — the in-panel settings page (<a href="#appearance">section&nbsp;13</a>).</li>
+            <li><strong>Disable Inspector</strong> — the popup-free way to switch everything off.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="gsec" id="appearance">
+      <h2><span class="num">13</span>Appearance — theme, accent and density</h2>
+      <p class="lead">A gear in the panel header opens Settings right inside the panel: what you see is the panel restyling itself, live.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_15_dark_panel.jpg" alt="Panel in dark theme with a purple accent color recoloring tabs, links and buttons" width="1440" height="940" />
+        <figcaption class="shot-caption">Dark theme with a purple accent — the accent recolors links, tabs, the primary button <em>and</em> the outlines drawn around detected fields on the page.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Theme</strong> — Light, Dark, or <strong>System</strong>, which now repaints live when your OS flips between light and dark.</li>
+        <li><strong>Accent</strong> — six tested palettes; the popup mirrors your choice so the two surfaces never disagree.</li>
+        <li><strong>Density</strong> — Comfortable or Compact padding, applied everywhere in the panel.</li>
+        <li>The same page also holds the behavioural switches: Highlight, Intercept clicks, Odoo Developer Mode, Show sensitive values and Copy format.</li>
+        <li><strong>Drag the panel</strong> by its header anywhere on screen — it re-anchors from right/bottom to left/top on the first drag.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="settings">
+      <h2><span class="num">14</span>The Settings tab — everything in one real page</h2>
+      <p class="lead">The popup stays deliberately small. <strong>All settings</strong> under <em>Enable Inspector</em> opens the complete settings in its own browser tab — also reachable from <code>chrome://extensions</code> or a keyboard shortcut.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_6_settings_page.jpg" alt="Full settings page in its own tab with Appearance, Detection, Behavior, Debug sections and a live preview of the panel" width="1440" height="1200" />
+        <figcaption class="shot-caption">The settings page: Appearance with a <strong>live preview of the real panel</strong> (same stylesheet, icons and palette, in an open shadow root), plus Detection, Behavior, Debug, sites and a privacy summary.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Sections</strong> — Appearance (theme/accent/density), Detection (Form View, List View, Highlight), Behavior (Intercept clicks, Show sensitive values, Copy format, Odoo Developer Mode), Debug, Auto-enable sites, and a Privacy summary.</li>
+        <li><strong>The preview is the real thing.</strong> It repaints as you change anything, so what you see is what the panel will look like.</li>
+        <li><strong>Two-way sync.</strong> Change a setting here and the popup updates immediately; change it in the popup and this page updates. Both read and write the same local storage — there is no "other" copy to get out of date.</li>
+        <li>All settings persist across sessions in <code>chrome.storage.local</code> and apply live to tabs where the inspector is already enabled.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="sites">
+      <h2><span class="num">15</span>Auto-enable on your own site</h2>
+      <p class="lead">Stop clicking Enable after every navigation: let the inspector start by itself on the one origin you actually work on.</p>
+
+      <div class="panel-row">
+        <figure class="shot natural" style="width:664px;">
+          <img src="assets/screenshot_7_settings_sites.jpg" alt="Settings page showing Debug logging, the Auto-enable sites list with remembered origins and Remove buttons, and the privacy summary" width="662" height="732" />
+          <figcaption class="shot-caption">Debug logging, the remembered sites list, and the privacy summary — the lower half of the settings page.</figcaption>
+        </figure>
+        <div style="flex:1 1 320px; min-width:280px;">
+          <ul>
+            <li><strong>Opt in per site</strong> — tick <em>Auto-enable on this site</em> in the popup (or add an origin on the settings page). Chrome then asks for access to <strong>that one origin</strong> and nothing else; there is no blanket host permission.</li>
+            <li><strong>Exact matching</strong> — remembering <code>https://erp.example.com</code> does not cover <code>https://intranet.example.com</code> or <code>http://erp.example.com</code>. Wildcards and pasted URLs containing credentials are refused before Chrome is asked.</li>
+            <li><strong>Manageable</strong> — every remembered site is listed with a <strong>Remove</strong> button in both the popup and the settings tab; removing it revokes the Chrome permission too. If you revoke access yourself in <code>chrome://extensions</code>, the stale entry is cleaned up automatically.</li>
+            <li><strong>Local files excluded</strong> — <code>file://</code> pages can't be remembered (browsers don't allow this kind of access), so the option is unavailable there.</li>
+            <li>With it off, the extension requests <strong>no host access at all</strong>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="gsec" id="debug">
+      <h2><span class="num">16</span>Debug mode — diagnostics on demand</h2>
+      <p class="lead">When something looks wrong, turn on verbose logging and a live readout of what the extension currently believes.</p>
+
+      <figure class="shot">
+        <img src="assets/screenshot_14_debug_readout.jpg" alt="Settings page opened with debug logging forced on, showing a live readout of effective settings and inspection state" width="1440" height="940" />
+        <figcaption class="shot-caption">Debug readout in the settings page: the effective theme/accent/density, the URL override, and what was last inspected — shown while <code>?debug=1</code> is active for that page.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Per-page URL switch</strong> — add <code>?debug=1</code> (or <code>?debug=0</code>) to a page's URL. The URL <strong>always wins</strong> over the saved switch, and it is <strong>never stored</strong> — it can't change a preference on any other page, and it can never enable the inspector by itself.</li>
+        <li><strong>Persistent switch</strong> — flip <strong>Debug logging</strong> on the settings page when you want it for every page you open from then on.</li>
+        <li>Output goes to the page's own console as verbose diagnostics, plus the live readout above.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="privacy">
+      <h2><span class="num">17</span>Privacy — what happens to your data</h2>
+      <p class="lead">The short version; the full text lives in the <a href="privacy.html">privacy policy</a>.</p>
+      <ul>
+        <li><strong>No collection.</strong> No analytics, telemetry, crash reporting or accounts — the developer operates no server that the extension talks to.</li>
+        <li><strong>The one exception is opt-in and goes to your own server.</strong> With Odoo Developer Mode on (the default; toggle it off any time), clicking a recognized Odoo field sends <em>only</em> the model name and technical field name to <strong>the same Odoo server the page is already open on</strong>, over your existing session — never a field value, never a third party. The same applies to button lookups, the version key, view XML IDs and Domain Builder's Load Fields.</li>
+        <li><strong>Everything else stays local.</strong> Page content, selectors, chatter messages and domain drafts live in the tab; your preferences — and the optional list of auto-enabled origins — live in <code>chrome.storage.local</code> and never leave your machine.</li>
+        <li><strong>Permissions are minimal.</strong> <code>activeTab</code>, <code>scripting</code> and <code>storage</code>, plus optional per-origin access <em>only</em> if you use auto-enable. Chrome does not show the broad "read and change all your data on all websites" warning for this extension.</li>
+        <li>Every claim above is verifiable in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">open-source repository</a>.</li>
+      </ul>
+    </section>
+
+    <section class="gsec" id="faq">
+      <h2><span class="num">18</span>Frequently asked questions</h2>
+
+      <div class="faq-item">
+        <h3>Does it work on pages that are not Odoo?</h3>
+        <p>Yes. On any web page the panel shows the HTML facts of a clicked form field or table column — element, type, id, name, classes, placeholder, state, CSS selector and XPath. The Odoo-specific sections (<code>ir.model.fields</code> definition, view XML IDs, version deep links, buttons, Domain Builder field loading) only appear on pages served by Odoo, and only when Odoo Developer Mode is on.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Can clicking a field change my form data?</h3>
+        <p>Not by default. <strong>Intercept clicks</strong> is on out of the box: the click is caught before the page sees it, so checkboxes never toggle, dropdowns never open and no value changes. You can deliberately switch to click-through mode if you want to keep editing the form while inspecting it.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Where does the Odoo field information come from?</h3>
+        <p>From your own Odoo server. With Odoo Developer Mode on, the extension sends only the model name and technical field name to the same server the page is already open on, using your existing logged-in session, and shows the definition returned by <code>ir.model.fields</code>. Field values are never sent, nothing goes to a third party, and you can turn the mode off at any time.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Which Odoo versions are supported?</h3>
+        <p>The panel reads your server's version (for example 16.0 or 17.0) and adapts: the "Open in Odoo" deep link uses the legacy <code>/web#model=</code> hash style on 16 and earlier and the <code>/odoo/action-</code> route on 17 and later, and Odoo Online build strings are handled too. When the version cannot be read, both link styles are offered with an explanation instead of a silent guess.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Where are my settings stored?</h3>
+        <p>Locally, in <code>chrome.storage.local</code> inside your browser profile — including the optional list of sites you chose to auto-enable on. Nothing is transmitted to us or to anyone else. Removing the extension clears that storage.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is Odoo Field Inspector free and open source?</h3>
+        <p>Yes. It is free to install from the Chrome Web Store and the full source code is published on GitHub, so the privacy claims in this guide can be verified against the code.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; 2026 Odoo Field Inspector. Not affiliated with or endorsed by Odoo S.A.</span>
+    <span>
+      <a href="index.html">Home</a>
+      &nbsp;·&nbsp;
+      <a href="guide.html">User Guide</a>
+      &nbsp;·&nbsp;
+      <a href="privacy.html">Privacy Policy</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Highlight the current section in the table of contents while scrolling.
+  (function () {
+    var links = document.querySelectorAll('.toc-box nav a');
+    if (!links.length || !('IntersectionObserver' in window)) return;
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var current = null;
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var a = byId[e.target.id];
+        if (!a || a === current) return;
+        if (current) current.classList.remove('on');
+        a.classList.add('on');
+        current = a;
+      });
+    }, { rootMargin: '-70px 0px -60% 0px', threshold: 0 });
+    Object.keys(byId).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+  })();
+</script>
+
+</body>
+</html>
