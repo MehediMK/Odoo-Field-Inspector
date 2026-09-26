@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}input,select,textarea{font:inherit;padding:4px}
+</style></head><body>
+<form id="form" onsubmit="event.preventDefault();document.getElementById('out').textContent='submitted';return false;">
+  <label for="remember">Remember me</label><input type="checkbox" id="remember" name="remember" value="1">
+  <label for="email">Email</label><input type="email" id="email" name="email" value="user@example.com">
+  <label for="pw">Password</label><input type="password" id="pw" name="password" value="hunter2">
+  <input type="hidden" name="csrf_token" value="tok-abc-123">
+  <input type="hidden" name="context" value="not-a-secret">
+  <label for="colour">Colour</label><select id="colour" name="colour"><option value="r">Red</option><option value="g" selected>Green</option></select>
+  <button type="submit">Send</button>
+</form>
+<div id="out"></div>
+<pre id="result">RUNNING</pre>
+<script>let receiver;window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();}}}};</script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const {ui}=window.__FI__;
+let requests=0;window.fetch=()=>{requests++;throw Error('Unexpected network request');};
+const remember=document.getElementById('remember'),email=document.getElementById('email'),pw=document.getElementById('pw'),colour=document.getElementById('colour');
+let sawClick=0,sawMouseDown=0;
+email.addEventListener('click',()=>sawClick++);
+remember.addEventListener('mousedown',()=>sawMouseDown++);
+const press=el=>{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));el.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));};
+const panelText=()=>ui.shadowRoot.textContent;
+const lastInfo=()=>ui.lastInfo;
+
+// --- default: interceptClicks on -> page never sees the click ---
+message('FI_ENABLE',{odooMode:false,highlight:false,interceptClicks:true});
+press(remember);
+check(ui.isPanelOpen()&&ui.lastInfo.element==='INPUT','Panel opens while intercepting');
+check(!remember.checked,'Checkbox not toggled while intercepting');
+check(remember.value==='1','Checkbox value untouched while intercepting');
+press(email);
+check(ui.lastInfo.element==='INPUT','Panel opens for the text input');
+check(sawClick===0,'Page click handler does NOT run while intercepting');
+check(ui.lastInfo.currentValue==='user@example.com','Ordinary values still displayed');
+
+press(pw);
+check(lastInfo().sensitive===true,'Password field flagged sensitive');
+check(lastInfo().currentValue===ui.REDACTED_TEXT||lastInfo().currentValue==='(redacted — sensitive field)','Password current value redacted');
+check(!lastInfo().htmlPreview.includes('hunter2'),'HTML preview does not leak password');
+const copyText=ui.buildCopyAllText(lastInfo(),'text');
+check(!copyText.includes('hunter2'),'Plain-text copy has no password');
+check(!ui.buildCopyAllText(lastInfo(),'json').includes('hunter2'),'JSON copy has no password');
+press(document.querySelector('input[name=csrf_token]'));
+check(!lastInfo().currentValue.includes('tok-abc-123'),'Hidden CSRF token redacted by name');
+press(document.querySelector('input[name=context]'));
+check(lastInfo().currentValue==='not-a-secret','Harmless hidden input still readable');
+
+// --- click-through: panel opens AND the page keeps working ---
+message('FI_UPDATE_SETTINGS',{interceptClicks:false});
+sawClick=0;sawMouseDown=0;
+press(remember);
+check(ui.isPanelOpen(),'Panel still opens in click-through mode');
+check(remember.checked,'Checkbox toggles through to the page in click-through mode');
+check(sawMouseDown===1,'Page mousedown handler runs in click-through mode');
+remember.checked=false;remember.dispatchEvent(new Event('change',{bubbles:true}));
+press(email);
+check(sawClick===1,'Page click handler runs in click-through mode');
+email.value='typed@example.com';
+press(colour);
+check(ui.lastInfo.element==='SELECT','Panel opens for the select');
+check(colour.value==='g','Select value unchanged when merely inspected');
+press(document.getElementById('form').querySelector('button'));
+check(document.getElementById('out').textContent==='submitted','Page submit handler still runs in click-through mode');
+
+// --- switching back restores the guarantee immediately ---
+message('FI_UPDATE_SETTINGS',{interceptClicks:true});
+press(remember);
+check(!remember.checked,'Intercepting restored immediately');
+press(email);
+check(sawClick===1,'Page click handler blocked again after switching back');
+
+// --- options menu round-trip ---
+ui.openOptions();
+const toggle=ui.optionsPanelEl.querySelector('[data-option="interceptClicks"]');
+check(!!toggle,'Options menu exposes Intercept Clicks');
+check(toggle.getAttribute('aria-pressed')==='true','Menu reflects intercept state');
+toggle.click();
+check(ui.settingsRef.interceptClicks===false,'Menu toggles the setting');
+press(remember);
+check(remember.checked,'Menu toggle switches to click-through');
+message('FI_UPDATE_SETTINGS',{interceptClicks:true});
+
+check(requests===0,'No network requests');
+message('FI_DISABLE');
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

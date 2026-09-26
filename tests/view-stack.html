@@ -1,0 +1,177 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}input{font:inherit;padding:4px}
+table{border-collapse:collapse;background:#fff}th,td{border:1px solid #ddd;padding:4px 8px}
+</style></head><body>
+<div class="o_form_view">
+  <div class="o_field_widget o_field_char" name="email">
+    <label for="email">Email</label><input type="email" id="email" name="email" value="user@example.com">
+  </div>
+</div>
+<div class="o_list_view">
+  <table class="o_list_table">
+    <thead><tr><th data-name="email">Email</th></tr></thead>
+    <tbody><tr><td name="email" class="o_data_cell">user@example.com</td></tr></tbody>
+  </table>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+// A fake Odoo backend, one scenario per model so each gets its own
+// viewArch/viewStack cache entry (the caches are keyed by model+type, which is
+// what makes independent scenarios possible in a single page).
+const calls=[];let model='res.partner';
+const ERR=msg=>({name:'Odoo Server Error',data:{name:'odoo.exceptions.AccessError',message:msg,arguments:[msg]}});
+const FORM_ARCH='<form><field name="email" widget="form_only"/></form>';
+const TREE_ARCH='<tree><field name="email" widget="tree_only"/></tree>';
+const VIEWS={
+ 'res.partner':{ // happy path: a custom inherit view on top of the base form
+  views:{form:{id:200,name:'res.partner.form.inherit.mine',inherit_id:[100],arch:FORM_ARCH}},
+  chain:{200:{id:200,name:'res.partner.form.inherit.mine',type:'form',inherit_id:[100]},100:{id:100,name:'Contact',type:'form',inherit_id:[]}},
+  data:[{res_id:200,module:'my_addon',name:'view_partner_form_inherit'},{res_id:100,module:'base',name:'view_partner_form'}]},
+ 'res.users':{ // the parent view is unreadable for this user
+  views:{form:{id:200,name:'res.users.form.inherit.mine',inherit_id:[100],arch:FORM_ARCH}},
+  chainError:100,
+  data:[{res_id:200,module:'my_addon',name:'view_users_form_inherit'}]},
+ 'res.company':{ // active view was created without an external ID
+  views:{form:{id:300,name:'company.form.manual',inherit_id:[100],arch:FORM_ARCH}},
+  chain:{300:{id:300,name:'company.form.manual',type:'form',inherit_id:[100]},100:{id:100,name:'Company',type:'form',inherit_id:[]}},
+  data:[{res_id:100,module:'base',name:'view_company_form'}]},
+ 'mail.thread':{ // inherit_id points back at itself: must not loop forever
+  views:{form:{id:400,name:'thread.form.a',inherit_id:[401],arch:FORM_ARCH}},
+  chain:{400:{id:400,name:'thread.form.a',type:'form',inherit_id:[401]},401:{id:401,name:'thread.form.b',type:'form',inherit_id:[400]}},
+  data:[{res_id:400,module:'mail',name:'view_thread_form'},{res_id:401,module:'other',name:'view_thread_form_b'}]},
+ 'sale.order':{ // a pre-17 server: 'list' does not exist, only 'tree'
+  views:{form:{id:500,name:'sale.order.form',arch:FORM_ARCH},tree:{id:501,name:'sale.order.tree',arch:TREE_ARCH}},
+  chain:{500:{id:500,name:'sale.order.form',type:'form',inherit_id:[]},501:{id:501,name:'sale.order.tree',type:'tree',inherit_id:[]}},
+  data:[{res_id:501,module:'sale',name:'view_order_tree'},{res_id:500,module:'sale',name:'view_order_form'}]},
+};
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();},get(){return Promise.resolve({});}}}};
+let receiver;
+window.fetch=async(url,options)=>{
+  const body=JSON.parse(options.body);
+  const {model:m,method,args,kwargs}=body.params;
+  const key=`${m}.${method}`;
+  calls.push({key,args,kwargs});
+  // Config is keyed by the model *under inspection*, not by the model being
+  // called: the ir.ui.view / ir.model.data requests name those helper models,
+  // not the one whose view is being resolved.
+  const cfg=VIEWS[model]||{};
+  const fail=msg=>{throw ERR(msg);};
+  const result=(()=>{
+    if(key==='ir.model.fields.search_read')return [{id:42,field_description:'Email',ttype:'char',required:false,readonly:false,store:true}];
+    if(key==='ir.config_parameter.get_param')return '17.0';
+    if(key.endsWith('.get_views')){
+      const type=(kwargs&&kwargs.views&&kwargs.views[0][1])||'form';
+      const view=cfg.views&&cfg.views[type];
+      if(!view)fail(`Invalid view type ${type} for ${m}`);
+      return {views:{[type]:view}};
+    }
+    if(key==='ir.ui.view.read'){
+      const id=args[0][0];
+      if(cfg.chainError===id)fail('You are not allowed to access ir.ui.view');
+      const v=cfg.chain&&cfg.chain[id];
+      return v?[v]:[];
+    }
+    if(key==='ir.model.data.search_read'){
+      const ids=(kwargs.domain.find(d=>d[0]==='res_id')||[])[2]||[];
+      return (cfg.data||[]).filter(d=>ids.includes(d.res_id));
+    }
+    return null;
+  })();
+  return {ok:true,json:async()=>({jsonrpc:'2.0',id:body.id,result})};
+};
+// Pretend the page just talked to whichever model the test is currently on.
+performance.getEntriesByType=()=>[{name:`/web/dataset/call_kw/${model}/web_read`,startTime:10}];
+</script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const settle=()=>new Promise(r=>setTimeout(r,60));
+const {ui,odoo}=window.__FI__;
+const email=document.getElementById('email');
+const cell=document.querySelector('td.o_data_cell');
+const press=el=>{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));el.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));};
+const body=()=>ui.shadowRoot.textContent;
+const stack=()=>ui.lastInfo.odooViewStack;
+// Every view type requested so far, in order — the list/tree fallback means the
+// last one is not necessarily the one we started with.
+const typesAsked=()=>calls.filter(c=>c.key.endsWith('.get_views')).map(c=>c.kwargs.views[0][1]);
+const hrefs=()=>[...ui.shadowRoot.querySelectorAll('a.fi-link')].map(a=>a.getAttribute('href'));
+const dataCalls=()=>calls.filter(c=>c.key==='ir.model.data.search_read');
+
+message('FI_ENABLE',{odooMode:true,highlight:false,interceptClicks:true,formView:true,listView:true});
+
+// --- happy path: active view + one ancestor, both named by XML ID ---
+press(email);await settle();
+check(Array.isArray(stack()),'View stack resolves to a list');
+check(stack().length===2,'Inherit chain has the active view and its parent');
+check(stack()[0].xmlId==='my_addon.view_partner_form_inherit','Active view XML ID comes from ir.model.data');
+check(stack()[1].xmlId==='base.view_partner_form','Parent view XML ID is resolved too');
+check(stack().activeId===200,'Active view record id is the one get_views returned');
+check(stack().requestedType==='form','Requested view type is recorded');
+check(typesAsked().includes('form'),'A form field asks for the form view');
+check(body().includes('View Stack'),'Panel labels the View Stack block');
+check(body().includes('Inherits From (1)'),'Panel labels the inheritance chain');
+check(body().includes('my_addon.view_partner_form_inherit')&&body().includes('base.view_partner_form'),'Panel shows both XML IDs');
+check(dataCalls().length===1,'Both XML IDs are resolved in a single ir.model.data request');
+check(hrefs().some(h=>h.includes('/odoo/action-base.action_ui_view')&&h.includes('active_id=200')),'Active view has a version-correct deep link');
+check(hrefs().some(h=>h.includes('action_ui_view')&&h.includes('active_id=100')),'Parent view has a deep link too');
+const copyForm=ui.buildCopyAllText(ui.lastInfo,'text');
+check(copyForm.includes('Active View XML ID: my_addon.view_partner_form_inherit'),'Copy-all text names the active XML ID');
+check(copyForm.includes('Inherits From: base.view_partner_form'),'Copy-all text names the parent XML ID');
+
+// --- a view the user cannot read its parent: partial, not failed ---
+model='res.users';press(email);await settle();
+check(Array.isArray(stack())&&stack().length===1,'Unreadable parent truncates the chain instead of failing it');
+check(stack()[0].xmlId==='my_addon.view_users_form_inherit','Active view still resolved when the parent read fails');
+check(Boolean(stack().partial),'Partial chain is flagged');
+check(body().includes('Chain is incomplete'),'Panel explains the chain is incomplete');
+check(body().includes('my_addon.view_users_form_inherit'),'Panel still shows the active XML ID');
+
+// --- a view with no external ID (created in the UI, not in a data file) ---
+model='res.company';press(email);await settle();
+check(stack()[0].xmlId==='','No ir.model.data row leaves the XML ID empty, not undefined');
+check(body().includes('no external ID'),'Panel says the view has no external ID');
+check(body().includes('base.view_company_form'),'The parent still resolves even when the active view has no XML ID');
+
+// --- a self-referential inherit_id must terminate ---
+model='mail.thread';press(email);await settle();
+check(stack().length===2,'A cycle in inherit_id is cut, not followed forever');
+check(stack()[0].xmlId==='mail.view_thread_form'&&stack()[1].xmlId==='other.view_thread_form_b','Chain before the cycle is intact');
+
+// --- pre-17 server: 'list' does not exist, the lookup must fall back to 'tree' ---
+// and a list column's attributes must come from the tree arch, NOT the form
+// arch — reading the form arch would report widget="form_only" for a list cell.
+model='sale.order';calls.length=0;press(cell);await settle();
+check(ui.lastInfo.kind==='listCell','Clicking a data cell resolves as a list cell');
+check(ui.lastInfo.odooViewType==='list','A list cell asks for the list view');
+check(typesAsked().includes('list'),'The list view type is requested first');
+check(typesAsked().includes('tree'),'A pre-17 server is retried under the tree name');
+check(typesAsked().length===2,'The failed list request and the tree retry are each made once, not per-lookup');
+check(stack()[0].xmlId==='sale.view_order_tree','Falls back to the tree view on a pre-17 server');
+check(stack().requestedType==='tree','The fallback type is reported, not hidden');
+check(ui.lastInfo.odooViewAttrs.attrs.widget==='tree_only','List column attributes come from the list arch, not the form arch');
+check(body().includes('Declared In Current View (list)'),'Label says list, not form');
+check(ui.buildCopyAllText(ui.lastInfo,'text').includes('Declared In Current View (list)'),'Copy-all text labels the view type too');
+
+// --- same model, form view: still reads the form arch ---
+press(email);await settle();
+check(ui.lastInfo.odooViewType==='form','A form field asks for the form view');
+check(ui.lastInfo.odooViewAttrs.attrs.widget==='form_only','Form field attributes come from the form arch');
+check(stack()[0].xmlId==='sale.view_order_form','Form field reports the form view XML ID');
+
+// --- privacy gate ---
+model='res.partner';calls.length=0;
+message('FI_UPDATE_SETTINGS',{odooMode:false});
+press(email);await settle();
+check(calls.length===0,'Zero Odoo RPCs while Odoo Developer Mode is off');
+check(ui.lastInfo.odooViewStack===undefined,'No view stack is recorded when the mode is off');
+
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

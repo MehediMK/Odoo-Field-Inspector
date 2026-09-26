@@ -199,11 +199,43 @@
       </div>
       <div class="feature-card">
         <h3>Never touches your data</h3>
-        <p>Clicks on detected fields are intercepted before the page sees them — no checkbox ever toggles, no dropdown ever opens, no value ever changes.</p>
+        <p>Clicks on detected fields are intercepted before the page sees them — no checkbox ever toggles, no dropdown ever opens, no value ever changes. Need to keep editing while inspecting? Turn <em>Intercept clicks</em> off for click-through mode.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Sensitive values redacted</h3>
+        <p>Password, hidden-token and other secret-named field values never appear in the panel or the clipboard unless you explicitly turn on <em>Show sensitive values</em>.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Make the panel yours</h3>
+        <p>A gear in the panel header opens a Settings page: Light, Dark, or <em>System</em> (which now repaints live when your OS flips); six accent colors that recolor links, tabs, the primary button and the outlines drawn around detected fields; and Comfortable or Compact density. Every other setting lives in the same page, and the popup mirrors your choices.</p>
+      </div>
+      <div class="feature-card">
+        <h3>A settings page in its own tab</h3>
+        <p>The popup stays small — quick toggles and an <em>All settings</em> button underneath <em>Enable Inspector</em> that opens everything in a real browser tab: Appearance, Detection, Behavior, Debug, the sites you auto-enable on, and a privacy summary, all with a live preview of the actual panel. It repaints as you change anything, and a change made in the popup shows up here immediately (and the other way round).</p>
+      </div>
+      <div class="feature-card">
+        <h3>Debug mode, on demand</h3>
+        <p>Add <code>?debug=1</code> to a page URL — or flip Debug logging in Settings — for verbose console diagnostics and a live readout of the effective settings. <code>?debug=0</code> forces it off, the URL always wins over the saved switch, and it is never stored.</p>
+      </div>
+      <div class="feature-card">
+        <h3>What does this button do?</h3>
+        <p>A dedicated Button tab shows the Python method a button calls, the action it opens, its <code>special=</code> and <code>confirm=</code>, and the record it would act on. A normal click is never hijacked — inspect buttons with <em>Intercept clicks</em> off, or pick one in the Field Finder without pressing it.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Which view XML ID is this?</h3>
+        <p>The panel resolves the active view's XML ID and the chain it inherits from — so you can see that <code>my_addon.view_partner_form_inherit</code> is layered on <code>base.view_partner_form</code> — with a direct link into Technical → Views for each one. List columns report the list view, not the form view.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Version-aware Odoo deep links</h3>
+        <p>The panel reads your server's Odoo version and builds the “Open in Odoo” link in the URL style that version actually supports — the legacy <code>/web#model=</code> hash on 16 and earlier, the <code>/odoo/action-</code> route on 17+.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Auto-enable on your own site</h3>
+        <p>Tick one box and the inspector starts by itself on every page you load at that one origin. Chrome is asked for access to that site only, remembered sites are listed with a Remove button in the popup and in the settings tab, and switching it off hands the access straight back.</p>
       </div>
       <div class="feature-card">
         <h3>Nothing leaves your browser</h3>
-        <p>Except one explicit, toggleable exception: Odoo field/model lookups, which ask the same Odoo server you're already logged into — never a third-party server. See the <a href="privacy.html">privacy policy</a>.</p>
+        <p>Except one explicit, toggleable exception: Odoo field/model lookups, which ask the same Odoo server you're already logged into — never a third-party server. No host access at all unless you opt in per site. See the <a href="privacy.html">privacy policy</a>.</p>
       </div>
     </div>
   </div>

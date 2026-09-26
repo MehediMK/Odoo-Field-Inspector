@@ -9,6 +9,10 @@ body{font-family:system-ui;margin:20px;background:#f6f7fa}.o_form_view{display:f
 </div><div contenteditable="true">UNSENT DRAFT</div></div></aside></div>
 <pre id="result">RUNNING</pre>
 <script>let receiver;window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();}}}};</script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
 <script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
 <script>
 (async()=>{

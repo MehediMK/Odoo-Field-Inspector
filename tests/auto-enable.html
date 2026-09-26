@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}input{font:inherit;padding:4px}
+</style></head><body>
+<label for="name">Name</label><input type="text" id="name" name="name" value="Alice">
+<pre id="result">RUNNING</pre>
+<script>
+// shared.js is loaded in this fixture on purpose: it is also a plain <script>
+// in popup.html, so it must not touch any chrome API at load time.
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(msg){sent.push(msg);}},storage:{local:{set(){return Promise.resolve();},get(){return Promise.resolve({});}}}};
+let receiver;const sent=[];</script>
+<script src="../shared.js"></script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+function stateMessages(){return sent.filter(m=>m.type==='FI_STATE_CHANGED');}
+function lastState(){return stateMessages()[stateMessages().length-1];}
+const {ui,FI_SHARED}=window.__FI__||{};
+const shared=self.FI_SHARED;
+
+// --- shared.js is loadable as a page script and exposes the injection list ---
+check(!!shared,'shared.js loads without any chrome API present at load time');
+check(Array.isArray(shared.CONTENT_FILES)&&shared.CONTENT_FILES.includes('content/content.js'),'Shared list includes the entry-point content script');
+check(shared.CONTENT_FILES.indexOf('content/content.js')===shared.CONTENT_FILES.length-1,'Entry point stays last in the injection order');
+check(shared.CONTENT_CSS.length===1,'Shared list names exactly one stylesheet');
+check(shared.isRememberedOrigin(location.href,[])===false,'A file:// fixture page is never auto-enable eligible');
+
+// --- auto-enable path: the worker sends FI_ENABLE with the stored settings ---
+sent.length=0;
+message('FI_ENABLE',{odooMode:false,highlight:false,interceptClicks:true,formView:true,listView:true,copyFormat:'text'});
+check(lastState().enabled===true,'FI_ENABLE reports enabled to the background');
+check(lastState().userInitiated===false,'FI_ENABLE is not a user-initiated disable');
+check(ui.settingsRef.highlight===false,'Settings sent by the worker are applied');
+const input=document.getElementById('name');
+input.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));
+input.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));
+check(ui.isPanelOpen()&&ui.lastInfo.currentValue==='Alice','Auto-enabled inspector inspects fields normally');
+
+// Re-enabling must be safe: the worker can inject into a tab the popup
+// already enabled (Odoo SPA navigation keeps the old content script alive).
+message('FI_ENABLE',{odooMode:false,highlight:false});
+check(ui.settingsRef.highlight===false,'A second FI_ENABLE does not throw or reset settings');
+
+// --- user-initiated disable (popup) is distinguishable from teardown ---
+sent.length=0;
+message('FI_DISABLE');
+check(lastState().enabled===false,'FI_DISABLE reports disabled');
+check(lastState().userInitiated===true,'FI_DISABLE is flagged user-initiated so auto-enable stays off for this site');
+check(!ui.isPanelOpen(),'FI_DISABLE closes the panel');
+
+// --- user-initiated disable via the in-page menu is flagged the same way ---
+message('FI_ENABLE',{odooMode:false,highlight:false});
+sent.length=0;
+ui.openOptions();
+const disableOption=ui.optionsPanelEl.querySelector('[data-option="disable"]');
+check(!!disableOption,'Options menu exposes Disable Inspector');
+disableOption.click();
+check(lastState().enabled===false&&lastState().userInitiated===true,'Menu disable is also flagged user-initiated');
+
+// --- pagehide teardown must NOT look like a user opt-out ---
+message('FI_ENABLE',{odooMode:false,highlight:false});
+sent.length=0;
+window.dispatchEvent(new Event('pagehide'));
+check(lastState().enabled===false,'pagehide disables the inspector');
+check(lastState().userInitiated===false,'pagehide is not reported as a user opt-out');
+
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

@@ -1,0 +1,119 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}input{font:inherit;padding:4px}
+</style></head><body>
+<div class="o_form_view">
+  <div class="o_field_widget o_field_char" name="email">
+    <label for="email">Email</label><input type="email" id="email" name="email" value="user@example.com">
+  </div>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+// A fake Odoo backend: every call_kw POST is answered from this table, and
+// every request is recorded so the tests can assert exactly which RPCs the
+// extension made (a version probe that fires when it shouldn't is a privacy
+// bug, not just a perf one).
+const calls=[];let versionValue='17.0';let versionResolves=true;
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();},get(){return Promise.resolve({});}}}};
+let receiver;
+window.fetch=async(url,options)=>{
+  const body=JSON.parse(options.body);
+  const key=`${body.params.model}.${body.params.method}`;
+  calls.push({url,key,args:body.params.args,kwargs:body.params.kwargs});
+  const result=(()=>{
+    if(key==='ir.model.fields.search_read')return [{id:42,field_description:'Email',ttype:'char',required:false,readonly:false,store:true}];
+    if(key==='ir.config_parameter.get_param'){
+      const param=body.params.args[0][0];
+      if(param==='web.base.build.description')return versionResolves?versionValue:null;
+      if(param==='web.base.build.version')return '16.0';
+      return null;
+    }
+    if(key==='res.partner.get_views')return {views:{form:{arch:'<form><field name="email"/></form>'}}};
+    return null;
+  })();
+  return {ok:true,json:async()=>({jsonrpc:'2.0',id:body.id,result})};
+};
+// Pretend the page itself recently talked to res.partner, which is how
+// detectCurrentModel() finds the model behind the clicked field.
+performance.getEntriesByType=()=>[{name:'/web/dataset/call_kw/res.partner/web_read',startTime:10}];
+</script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const settle=()=>new Promise(r=>setTimeout(r,30));
+const {ui,odoo}=window.__FI__;
+const email=document.getElementById('email');
+const press=el=>{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));el.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));};
+const body=()=>ui.shadowRoot.textContent;
+// href lives in an attribute, so it must be read off the anchor — checking
+// textContent would silently pass for a missing link.
+const fieldRecordHref=()=>{const a=[...ui.shadowRoot.querySelectorAll('a.fi-link')].find(a=>{const h=a.getAttribute('href')||'';return h.includes('ir_model_fields')||h.includes('/web#model=');});return a?a.getAttribute('href'):'';};
+const versionCalls=()=>calls.filter(c=>c.key==='ir.config_parameter.get_param');
+
+// --- parsed version shapes, including SaaS and junk ---
+check(odoo.fetchServerVersion===undefined||typeof odoo.fetchServerVersion==='function','Version probe is exposed');
+
+// --- Odoo 17+ : action-style deep link, no legacy hash URL ---
+message('FI_ENABLE',{odooMode:true,highlight:false,interceptClicks:true,formView:true,listView:true});
+press(email);await settle();
+check(ui.lastInfo.odooServerVersion&&ui.lastInfo.odooServerVersion.major===17,'Version 17.0 parsed from the build description');
+check(body().includes('17.0'),'Panel shows the server version');
+const link17=odoo.fieldRecordLink(42,{raw:'17.0',major:17});
+check(link17.form==='action'&&link17.url.includes('/odoo/action-base.action_ir_model_fields'),'Odoo 17 uses the /odoo/action- URL');
+check(link17.url.includes('active_id=42'),'Odoo 17 link targets the record id');
+check(!link17.url.includes('/web#model='),'Odoo 17 link has no legacy hash URL');
+check(fieldRecordHref().includes('/odoo/action-base.action_ir_model_fields'),'Panel link uses the 17+ style');
+check(!fieldRecordHref().includes('/web#model=ir.model.fields'),'Panel shows no legacy link on 17+');
+check(body().includes('Server Version'),'Panel labels the version row');
+check(ui.buildCopyAllText(ui.lastInfo,'text').includes('/odoo/action-base.action_ir_model_fields'),'Copy-all text uses the 17+ link too');
+
+// --- Odoo <=16 : legacy hash URL ---
+const legacy=odoo.fieldRecordLink(42,{raw:'16.0',major:16});
+check(legacy.form==='legacy'&&legacy.url.includes('/web#model=ir.model.fields&id=42'),'Odoo 16 uses the legacy hash URL');
+check(odoo.fieldRecordLink(42,{raw:'15.0',major:15}).form==='legacy','Odoo 15 uses the legacy hash URL');
+check(odoo.fieldRecordLink(42,{raw:'saas~17.2',major:17,saas:true}).form==='action','SaaS 17.x uses the action URL');
+check(odoo.fieldRecordLink(42,{raw:'saas~16.1',major:16,saas:true}).form==='legacy','SaaS 16.x uses the legacy URL');
+
+// --- unknown version: no silent guess, both styles offered ---
+const unknown=odoo.fieldRecordLink(42,null);
+check(unknown.form==='legacy-unknown','Unknown version is reported, not guessed');
+check(unknown.url.includes('/web#model=ir.model.fields'),'Unknown version falls back to the conservative legacy link');
+check(odoo.fieldRecordLink(42,{raw:'nightly-custom',major:null}).form==='legacy-unknown','Unrecognized version string counts as unknown');
+check(odoo.fieldListLink().includes('/odoo/action-base.action_ir_model_fields'),'A 17+ field-list link is available as the fallback');
+
+// Drive the real render path into the state a failed probe produces: the
+// version cache can't be re-probed on demand, so replay it through the same
+// public hook the live probe uses.
+const rid=ui.beginOdooLookup();
+ui.applyOdooVersion(rid,null);
+check(fieldRecordHref().includes('/web#model=ir.model.fields'),'Unknown version: panel offers the legacy link');
+check(body().includes('could not be detected'),'Unknown version: panel explains the fallback');
+const allHrefs=[...ui.shadowRoot.querySelectorAll('a.fi-link')].map(a=>a.getAttribute('href'));
+check(allHrefs.some(h=>h.includes('/odoo/action-base.action_ir_model_fields')),'Unknown version: panel also offers the 17+ link');
+const copyUnknown=ui.buildCopyAllText(ui.lastInfo,'text');
+check(copyUnknown.includes('/web#model=ir.model.fields')&&copyUnknown.includes('Odoo 17+ URL'),'Copy-all text offers both URL styles when unknown');
+ui.applyOdooVersion(rid,{raw:'17.0',major:17,minor:0,saas:false});
+check(fieldRecordHref().includes('/odoo/action-'),'Panel returns to the 17+ link once the version is known');
+
+// --- the version probe is cached per page ---
+const before=versionCalls().length;
+press(email);await settle();press(email);await settle();
+check(versionCalls().length===before,'Version probe is not repeated for later field clicks');
+check(versionCalls().length>0,'Version probe did run at all');
+
+// --- privacy gate: no Odoo RPC of any kind when Developer Mode is off ---
+calls.length=0;
+message('FI_UPDATE_SETTINGS',{odooMode:false});
+press(email);await settle();
+check(calls.length===0,'Zero Odoo RPCs while Odoo Developer Mode is off');
+check(ui.lastInfo.odooServerVersion===undefined,'No version is recorded when the mode is off');
+message('FI_UPDATE_SETTINGS',{odooMode:true});
+
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

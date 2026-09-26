@@ -6,12 +6,19 @@
  * chrome.runtime messages. Guarded so re-injection (e.g. popup calling
  * scripting.executeScript twice) is a safe no-op.
  *
- * Data-safety guarantee: while the inspector is enabled, clicks (and the
+ * Data-safety guarantee: while the inspector is enabled AND the
+ * "intercept clicks" setting is on (the default), clicks (and the
  * mousedown that precedes a <select> opening or a checkbox toggling) on a
  * detected field are intercepted in the capture phase and prevented from
  * reaching the page, so no form value or focus state is ever changed by
  * this extension. Clicks that don't land on a detected field are left
  * completely untouched and behave exactly as the host page intends.
+ *
+ * Click-through mode ("intercept clicks" off): the panel still opens on a
+ * click, but the event is allowed through to the page, so the user can
+ * keep working the form while inspecting it. This is an explicit opt-in
+ * because the page's own handlers then run normally — including anything
+ * they change.
  */
 (function () {
   if (window.__FI__ && window.__FI__.__contentLoaded__) return; // idempotent re-injection guard
@@ -20,17 +27,79 @@
 
   const { utils, detector, ui } = window.__FI__;
 
-  const DEFAULT_SETTINGS = {
-    formView: true,
-    listView: true,
-    highlight: true,
-    copyFormat: "text",
-    odooMode: true,
-  };
+  // One definition, in shared.js. A literal copy here used to be the thing
+  // that drifted from the popup's; tests/shared.test.cjs now fails if either
+  // surface defines its own defaults instead of reading this.
+  const DEFAULT_SETTINGS = self.FI_SHARED.DEFAULT_SETTINGS;
 
   const state = {
     enabled: false,
     settings: { ...DEFAULT_SETTINGS },
+    // null = the URL said nothing, so the saved `debug` setting decides.
+    debugOverride: null,
+    debug: false,
+  };
+
+  const debugLog = [];
+  const DEBUG_LOG_LIMIT = 80;
+
+  /**
+   * `?debug=1` / `?debug=0` from the page URL, or null when absent. Read
+   * through shared.js when it is present (the same rule the popup and worker
+   * use) and degraded to null when it is not, so a page that somehow loads
+   * these scripts without shared.js still gets a working inspector instead of
+   * a crash — it just loses the URL override.
+   */
+  function debugOverrideForUrl() {
+    const api = typeof self !== "undefined" ? self.FI_SHARED : null;
+    if (!api || typeof api.debugFlagForUrl !== "function") return null;
+    try {
+      const value = api.debugFlagForUrl(location.href);
+      return value === true || value === false ? value : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /**
+   * Debug diagnostics. Kept in a bounded ring so the on-screen readout stays
+   * useful, and only ever written when debug mode is actually on — the
+   * strings are built at the call site, so a disabled logger costs one
+   * boolean check per call site.
+   */
+  function logDebug(message, detail) {
+    if (!state.debug) return;
+    const stamp = new Date().toISOString().slice(11, 23);
+    let line = `[${stamp}] ${message}`;
+    if (detail !== undefined) {
+      let text;
+      try {
+        text = typeof detail === "string" ? detail : JSON.stringify(detail);
+      } catch (err) {
+        text = "(unserializable detail)";
+      }
+      line += ` ${text}`;
+    }
+    debugLog.push(line);
+    if (debugLog.length > DEBUG_LOG_LIMIT) debugLog.shift();
+    console.debug(`[Field Inspector] ${line}`);
+  }
+
+  ui.onDebugReport = function () {
+    // No lines at all when debug is off: the readout is a debug feature, and a
+    // panel that prints "effective debug: false" is noise on a normal page.
+    if (!state.debug) return { lines: [] };
+    const resolved = ui.resolvedTheme || "(unpainted)";
+    return {
+      lines: [
+        ...debugLog,
+        `enabled: ${state.enabled}`,
+        `url debug param: ${state.debugOverride === null ? "(not set)" : state.debugOverride}`,
+        `saved debug setting: ${!!state.settings.debug}`,
+        `effective debug: ${state.debug}`,
+        `theme: ${state.settings.theme} → ${resolved}   accent: ${state.settings.accent}   density: ${state.settings.density}`,
+      ],
+    };
   };
 
   let lastHoverEl = null;
@@ -52,7 +121,7 @@
   };
   ui.onFinderSelect = (entry) => inspectElement({ kind: entry.kind, el: entry.el });
 
-  ui.onDisable = () => disable();
+  ui.onDisable = () => disable(true);
   ui.onOptionSetting = (key, value) => {
     updateSettings({ [key]: value });
     chrome.storage.local.set({ fiSettings: state.settings }).catch((err) => {
@@ -67,7 +136,7 @@
 
   function onMouseDown(e) {
     try {
-      if (!state.enabled || inPanel(e)) return;
+      if (!state.enabled || !state.settings.interceptClicks || inPanel(e)) return;
       const resolved = detector.resolveInspectable(e.target, state.settings);
       if (!resolved) return;
       // Prevent the native focus / dropdown-open / check-toggle that mousedown
@@ -92,15 +161,25 @@
       info = detector.buildColumnInfo(resolved.el);
     } else if (resolved.kind === "listCell") {
       info = detector.buildDataCellInfo(resolved.el);
+    } else if (resolved.kind === "button") {
+      info = detector.buildButtonInfo(resolved.el);
     } else {
-      info = detector.buildFormFieldInfo(resolved.el);
+      info = detector.buildFormFieldInfo(resolved.el, { showSensitiveValues: state.settings.showSensitiveValues });
     }
 
+    const started = state.debug ? performance.now() : 0;
+    logDebug(`inspect ${info.kind}`, {
+      tag: (resolved.el.tagName || "").toLowerCase(),
+      name: info.odooFieldName || info.nameAttr || info.technicalName || "",
+    });
+
     const odoo = window.__FI__.odoo;
-    const canLookUpOdoo = state.settings.odooMode && info.odooFieldName && odoo && (info.kind === "form" || info.kind === "listCell");
+    const canLookUpOdoo =
+      state.settings.odooMode && odoo && (info.kind === "button" || ((info.odooFieldName) && (info.kind === "form" || info.kind === "listCell")));
     if (canLookUpOdoo) {
       info.odooModel = odoo.detectCurrentModel();
     }
+    logDebug("odoo lookup", { model: info.odooModel || "(none)", requested: !!canLookUpOdoo });
 
     ui.showPanel(info, state.settings, resolved.el);
 
@@ -109,13 +188,45 @@
     // race-guarded against the user clicking a different field before the
     // RPC resolves — see ui.beginOdooLookup/applyOdooFieldMeta.
     if (canLookUpOdoo && info.odooModel) {
+      // A list column is declared in the list view, not the form view, so the
+      // arch/chain lookups have to be told which one is on screen — otherwise
+      // inspecting a list cell named "email" reports whatever the *form* view
+      // happens to declare under that name.
+      const viewType = resolved.kind === "form" || resolved.kind === "button" ? "form" : "list";
+      info.odooViewType = viewType;
+
       const requestId = ui.beginOdooLookup();
-      odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
-        ui.applyOdooFieldMeta(requestId, meta);
+
+      // A button has no ir.model.fields row: the interesting metadata is how
+      // it's declared in the view (method/action name, modifiers, groups) plus
+      // the View Stack it belongs to. So it skips the field lookup entirely.
+      const isButton = info.kind === "button";
+      if (!isButton) {
+        odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
+          ui.applyOdooFieldMeta(requestId, meta);
+        });
+      }
+
+      odoo.fetchViewNodeAttrs(info.odooModel, isButton ? "button" : "field", isButton ? info.nameAttr : info.odooFieldName, viewType).then(
+        (viewAttrs) => {
+          ui.applyOdooViewAttrs(requestId, viewAttrs);
+        }
+      );
+
+      // Which XML ID this page is rendered from, and what it inherits from.
+      odoo.fetchViewStack(info.odooModel, viewType).then((stack) => {
+        ui.applyViewStack(requestId, stack);
       });
-      odoo.fetchViewFieldAttrs(info.odooModel, info.odooFieldName).then((viewAttrs) => {
-        ui.applyOdooViewAttrs(requestId, viewAttrs);
+      // Server version decides which deep-link style the panel offers, and is
+      // cached per page, so this costs one extra RPC per tab at most.
+      odoo.fetchServerVersion().then((version) => {
+        ui.applyOdooVersion(requestId, version);
       });
+    }
+
+    if (state.debug) {
+      const kind = info.kind;
+      requestAnimationFrame(() => logDebug(`panel rendered`, { kind, ms: Math.round((performance.now() - started) * 10) / 10 }));
     }
   }
 
@@ -123,16 +234,23 @@
     try {
       if (!state.enabled) return;
       if (inPanel(e)) return; // let the panel's own listeners handle internal clicks
-      ui.closeOptions();
 
       const resolved = detector.resolveInspectable(e.target, state.settings);
       if (!resolved) {
         ui.closePanel();
+        ui.closeOptions();
         return;
       }
 
-      e.preventDefault();
-      e.stopPropagation();
+      ui.closeOptions();
+
+      // In click-through mode the event is deliberately allowed to reach the
+      // page (no preventDefault/stopPropagation) so the form stays usable,
+      // while the panel still opens for the same element.
+      if (state.settings.interceptClicks) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
 
       inspectElement(resolved);
     } catch (err) {
@@ -170,6 +288,10 @@
       e.preventDefault();
       e.stopPropagation();
       ui.closeOptions(true);
+    } else if (ui.isSettingsOpen && ui.isSettingsOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      ui.closeSettings(true);
     } else if (window.__FI__.chatter?.isOpen()) {
       e.preventDefault();
       e.stopPropagation();
@@ -201,9 +323,17 @@
     document.removeEventListener("keydown", onKeyDown, true);
   }
 
-  function notifyBackground(enabled) {
+  /**
+   * @param {boolean} enabled
+   * @param {boolean} userInitiated
+   *   True when a person turned the inspector off (FAB menu or popup), false
+   *   for internal teardown such as pagehide. The service worker uses this
+   *   to remember an opt-out for the current site; reporting every internal
+   *   teardown as user intent would silently defeat per-site auto-enable.
+   */
+  function notifyBackground(enabled, userInitiated = false) {
     try {
-      chrome.runtime.sendMessage({ type: "FI_STATE_CHANGED", enabled });
+      chrome.runtime.sendMessage({ type: "FI_STATE_CHANGED", enabled, userInitiated });
     } catch (err) {
       // Extension context may be invalidated (e.g. extension reloaded); ignore.
     }
@@ -211,19 +341,27 @@
 
   function enable(settings) {
     state.enabled = true;
+    // Unknown/removed keys from a newer or older build are merged as-is and
+    // then normalised here, so an unknown theme/accent can never leave the
+    // panel unstyled (ui.applyTheme falls back rather than trusting the value).
     state.settings = { ...state.settings, ...(settings || {}) };
+    state.debugOverride = debugOverrideForUrl();
+    state.debug = state.debugOverride === null ? !!state.settings.debug : state.debugOverride;
+    ui.debugState = { effective: state.debug, override: state.debugOverride, saved: !!state.settings.debug };
     document.documentElement.setAttribute("data-fi-active", "true");
     attachListeners();
     detector.applyHighlights(state.settings);
     detector.startObserving(state.settings);
     ui.ensureHost();
     ui.settingsRef = state.settings;
+    ui.applyTheme(state.settings);
     ui.showFinderButton();
     window.__FI__.chatter?.start();
+    logDebug("inspector enabled", { theme: state.settings.theme, accent: state.settings.accent, debug: state.debug });
     notifyBackground(true);
   }
 
-  function disable() {
+  function disable(userInitiated = false) {
     state.enabled = false;
     document.documentElement.removeAttribute("data-fi-active");
     detachListeners();
@@ -231,21 +369,52 @@
     detector.clearHighlights();
     ui.closePanel();
     ui.closeFinder();
+    ui.closeSettings();
     ui.hideFinderButton();
+    // The accent lives on <html> for content.css, which is injected into the
+    // page — so disabling has to take it back off, or the host page is left
+    // carrying properties (and a data attribute) it never had.
+    ui.clearTheme();
     window.__FI__.chatter?.stop();
     window.__FI__.domainBuilder?.close();
     if (lastHoverEl) {
       detector.setHover(lastHoverEl, false);
       lastHoverEl = null;
     }
-    notifyBackground(false);
+    notifyBackground(false, userInitiated);
+  }
+
+  /**
+   * Re-redacts any history entry that was built while "show sensitive
+   * values" was on, so turning the setting off also clears already-captured
+   * values from the Recent Fields cache (not just from the live panel).
+   */
+  function redactHistory() {
+    (ui.history || []).forEach((entry, i) => {
+      const info = entry && entry.info;
+      if (!info || info.kind !== "form" || !info.sensitive || !info.valuesRevealed || !entry.el) return;
+      try {
+        ui.history[i] = { ...entry, info: detector.buildFormFieldInfo(entry.el, { showSensitiveValues: false }) };
+      } catch (err) {
+        console.error("[Field Inspector] history redaction failed:", err);
+      }
+    });
   }
 
   function updateSettings(newSettings) {
     const wasOdooMode = state.settings.odooMode;
+    const wasReveal = state.settings.showSensitiveValues;
     state.settings = { ...state.settings, ...(newSettings || {}) };
     ui.settingsRef = state.settings;
+    state.debugOverride = debugOverrideForUrl();
+    state.debug = state.debugOverride === null ? !!state.settings.debug : state.debugOverride;
+    ui.debugState = { effective: state.debug, override: state.debugOverride, saved: !!state.settings.debug };
+    // Only paint while enabled: applyTheme would otherwise create the shadow
+    // host on a page where the inspector is supposed to be absent.
+    if (state.enabled) ui.applyTheme(state.settings);
+    else ui.clearTheme();
     if (wasOdooMode && !state.settings.odooMode) window.__FI__.domainBuilder?.close();
+    if (wasReveal && !state.settings.showSensitiveValues) redactHistory();
     if (state.enabled) {
       detector.applyHighlights(state.settings);
       detector.startObserving(state.settings);
@@ -254,7 +423,10 @@
         lastHoverEl = null;
       }
       if (ui.isOptionsOpen()) ui.openOptions();
-      if (ui.lastInfo && ui.lastElement && newSettings && "odooMode" in newSettings) {
+      if (ui.isSettingsOpen()) ui.openSettings();
+      const needsRebuild =
+        newSettings && ("odooMode" in newSettings || "showSensitiveValues" in newSettings);
+      if (ui.lastInfo && ui.lastElement && needsRebuild) {
         inspectElement({ kind: ui.lastInfo.kind, el: ui.lastElement });
       }
     }
@@ -273,7 +445,7 @@
           sendResponse({ ok: true });
           return false;
         case "FI_DISABLE":
-          disable();
+          disable(true);
           sendResponse({ ok: true });
           return false;
         case "FI_UPDATE_SETTINGS":

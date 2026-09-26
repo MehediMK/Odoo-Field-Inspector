@@ -61,31 +61,130 @@ No more guessing a field's technical name from CSS classes. This has its
 own on/off toggle in the popup, separate from the general inspector
 switch, and follows your system's light/dark theme.
 
+KNOWS YOUR ODOO VERSION
+The panel reads your server's Odoo version once per tab and shows it, then
+builds the "Open in Odoo" link in the URL style that version actually
+supports: the old /web#model=...&id=... link on Odoo 16 and earlier, the
+/odoo/action-... route on 17 and later. The same link shape is used in
+Copy All, so pasted notes keep working. If the version can't be read, you
+get both link styles and an explanation instead of a broken link.
+
+KNOWS WHICH VIEW XML ID YOU'RE LOOKING AT
+The rendered page is a merge of a whole stack of views, so it can't tell you
+which file it came from. The panel resolves that: the active view's XML ID
+(e.g. base.view_partner_form), the chain it inherits from (e.g. your own
+my_addon.view_partner_form_inherit on top of it), and a direct link into
+Settings > Technical > Views for each one. List columns report the list
+view's own XML ID, not the form view's. It reads view metadata only, never
+the view's source XML.
+
+MAKE IT YOURS
+A gear in the panel header opens a Settings page: pick Light, Dark, or follow
+your system (which now repaints live when your OS flips); choose one of six
+accent colors that recolor links, tabs, the primary button and the outlines the
+extension draws around detected fields; and switch between Comfortable and
+Compact density. Every other setting — Highlight, Intercept clicks, Odoo
+Developer Mode, Show Sensitive Values, Copy format — lives in the same place.
+Your choice is remembered, and the popup matches it. Nothing about your theme
+is ever sent anywhere.
+
+A FULL SETTINGS PAGE, IN ITS OWN TAB
+Prefer room to breathe? The popup stays a quick on/off panel, and "All
+settings" underneath Enable Inspector opens the complete settings in a real
+browser tab: every setting, grouped as Appearance, Detection, Behavior and
+Debug, with a live preview of the actual inspector panel — the same
+stylesheet, icons and colors it uses on the page — that repaints as you
+change anything. It also shows the sites you chose to auto-enable the
+inspector on, so you can add or remove one (and hand that access back to
+Chrome) in one place, and a plain-language summary of what the extension does
+and does not send anywhere. Change a setting in the popup and the open tab
+follows, and the other way round: they are the same settings, not two.
+
+DEBUG WHEN YOU NEED IT
+Add ?debug=1 to a page's URL (or flip Debug logging in Settings) for verbose
+console diagnostics and a live readout of the effective settings. ?debug=0
+forces it off; the URL always wins over the saved switch, it is never stored,
+and it can never turn the inspector on by itself.
+
+ODOO BUTTONS
+A dedicated Button tab tells you what a button will actually do: the
+Python method it calls, the action it opens, the special= built-in, the
+confirmation it asks for first, and the record (data-model/data-id) it
+would act on. Buttons are never hijacked by a normal click — in the
+default mode, clicking Save is just clicking Save — so you inspect them
+either with "Intercept clicks" off or by picking one in the search
+below, which opens a button's panel without pressing it. Attributes
+like groups=, invisible= and readonly= come from the button's own
+declaration in the view, because the rendered page does not keep them.
+
 FIELD FINDER
-A floating search button opens a page-wide search: filter every field
-and list column on the page by label or technical name, live as you
-type, then click a result to jump straight to its full inspector panel.
+A floating search button opens a page-wide search: filter every field,
+list column, and Odoo button on the page by label or technical name, live
+as you type, then click a result to jump straight to its full inspector
+panel.
 If an Odoo wizard (dialog) is open, the search automatically scopes to
 just that wizard's fields.
 
-NEVER TOUCHES YOUR DATA
+NEVER TOUCHES YOUR DATA (BY DEFAULT)
 While inspecting, clicks on fields are intercepted before the page sees
 them — labels never toggle checkboxes, <select> never opens, and no
 value or focus state ever changes. Turn the inspector off and the page
 behaves exactly as it did before.
 
+CLICK-THROUGH WHEN YOU NEED IT
+Prefer to keep filling the form while you inspect it? Turn "Intercept
+clicks" off and the panel still opens on your click, but the click
+reaches the page normally, exactly as it would without the extension.
+It is a toggle, never the default, and the inspector still never writes
+to a field or submits anything itself.
+
+SENSITIVE VALUES REDACTED
+Values of password inputs, hidden token/CSRF fields, and other
+secret-named fields never appear in the panel, in Copy All, or in JSON
+output — they are replaced with a redaction marker before anything can
+be displayed or copied. Turn on "Show sensitive values" only when you
+actually need them.
+
+START AUTOMATICALLY ON YOUR OWN ODOO
+By default the inspector starts only when you turn it on, and a page
+reload switches it off again. Tick "Auto-enable on this site" in the
+popup and it starts by itself every time you load a page on that one
+site. Chrome asks for access to that origin only, the sites you
+remembered are listed in the popup and in the Settings page with a
+Remove button, and turning it off hands the access straight back to
+Chrome. Remembering one site never grants access to any other.
+
 PRIVACY
-Everything runs locally in your browser. The one exception: the Odoo
+Everything runs locally in your browser. The full Settings page is a page of
+this extension that only reads and writes your own local settings — it has no
+access to any page you are viewing. Theme, accent, density and the debug switch
+are local preferences, stored on your machine and never transmitted; a
+?debug= parameter in a page URL is read only in that page's own tab, is never
+stored, and cannot enable the inspector by itself. The one exception: the Odoo
 field lookup above, which — only for fields recognized as Odoo fields —
 asks the SAME Odoo server you're already logged into for that field's
-definition, using your existing session. No field values, browsing
-history, or personal data are ever sent, and there is no server or
-analytics of ours in the loop at all. Full privacy policy:
+definition, using your existing session, plus — when you inspect a button
+— that button's model and method/action name so its declaration can be
+read from the view (buttons are never intercepted on a normal click, and
+no record data, label, or target record is sent), plus one fixed hard-coded
+config key (web.base.build.description, at most once per tab) to read
+your server's version, and that model's view metadata (which view XML ID
+you're looking at and what it inherits from — ids and names, never the
+view's source XML). No field values, browsing history, or personal
+data are ever sent, and there is no server or analytics of ours in the
+loop at all. No host permissions are requested unless you opt in to
+per-site auto-enable, which grants access to the single site you pick
+and nothing else. Full privacy policy:
 https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html
 
-No host permissions are requested, so Chrome never shows the broad
-"read and change all your data on all websites" warning: content scripts
-only run on a tab after you explicitly enable the inspector for it.
+No host permissions are requested up front, so Chrome never shows the
+broad "read and change all your data on all websites" warning: content
+scripts only run on a tab after you explicitly enable the inspector for
+it. The one exception is opt-in and per site: if you tick "Auto-enable on
+this site" in the popup, Chrome asks you to allow the extension on that
+one origin so the inspector can start automatically when you load pages
+there. It is used for nothing else, it is listed with a Remove button in
+the popup, and unticking it revokes the permission in Chrome too.
 
 WHO IT'S FOR
 Odoo developers debugging a view, functional consultants who need a
@@ -141,11 +240,38 @@ server, for the same inspection purpose.
 |---|---|
 | `activeTab` | Needed so the inspector can be injected into the current tab only after the user explicitly clicks the toolbar icon and enables it — not on every site automatically. |
 | `scripting` | Needed to inject the inspector's content scripts into the active tab on demand, when the user turns "Enable Inspector" on in the popup. |
-| `storage` | Needed to save the user's inspector preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode) locally via `chrome.storage.local`, so they persist between sessions. |
+| `storage` | Needed to save the user's inspector preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode / Show Sensitive Values / Intercept Clicks) locally via `chrome.storage.local`, so they persist between sessions. It also stores the list of origins the user chose for per-site auto-enable (origin strings only). |
+| Optional host permission (`http://*/*`, `https://*/*`) — requested only for a site the user picks | Declared as an *optional* host permission, so it grants nothing by default. The extension asks Chrome for one specific origin only when the user ticks "Auto-enable on this site", and uses it solely to re-inject the inspector when a page on that origin loads. It is never requested for any other site, is revocable from the popup (which calls `chrome.permissions.remove`), and the extension re-checks the grant on every load and stops injecting if it was revoked. No page content is read or stored as a result of holding this permission. |
 
 **Data usage disclosure** (checkboxes in the "Data collected" section):
 - Check **Website content** — because the Odoo lookup reads/sends a
-  field's technical name and model name (see Privacy policy above).
+  field's technical name and model name, or — when a button is inspected
+  in click-through mode or via the Field Finder — that button's model and
+  its method/action name (see Privacy policy above), and
+  because the inspector reads the clicked field's HTML and its value to
+  display them on screen. It also reads one fixed configuration key name
+  (`web.base.build.description`) from that same Odoo server to detect the
+  server version, at most once per tab, and reads that model's view metadata
+  (view record ids and their `inherit_id` chain, resolved to XML IDs through
+  one batched `ir.model.data` request) to report which view file a field or
+  button is declared in. A button lookup sends no label, no target record,
+  and makes no `ir.model.fields` request at all; it searches the already
+  fetched view arch for the button's `<button name="...">` declaration. Sensitive values (passwords,
+  hidden tokens) are redacted before display and before any copy, unless
+  the user turns on "Show sensitive values"; nothing read from the page is
+  transmitted.
+- Theme, accent color, density and debug settings are **not** transmitted and
+  are not website content: they are your own preferences, stored locally. The
+  extension does write a highlight outline onto inspected page elements, in
+  the accent color you chose, and removes it again when inspection is
+  disabled.
+- Also check **User activity** only if the dashboard requires it for the
+  optional-host-permission prompt. Nothing about the user's activity is
+  transmitted anywhere: the extension has no server. The per-site
+  auto-enable feature stores one origin string locally and uses it solely
+  to decide whether to inject on a page load. If the form does not force a
+  category for optional permissions, leave it unchecked and rely on the
+  justification text above.
 - Leave every other category unchecked (no personal info, location,
   health, financial, auth info, personal communications, web history,
   or user activity is collected).
@@ -256,14 +382,49 @@ cap is already reached, swapping one of these for a real-Odoo screenshot
 
 ## Package
 
-Upload `field-inspector-v1.3.0.zip` (rebuilt after the tabbed panel,
-colored type chips, table-styled rows, draggable panel, inspection
-history, jump-to-element, per-tab copy, and the Field Finder — including
-wizard-scoped search — were added, plus the new icon set). It contains
-only the files `manifest.json` references: `manifest.json`,
-`background.js`, `content/`, `content.css`, `popup/`, `icons/*.png`.
-`README.md`, `PRIVACY_POLICY.md`, `STORE_LISTING.md`, `icons/icon.svg`,
-and `promo/` are dev-only and intentionally excluded from the package.
+Upload `field-inspector-v1.10.0.zip`. It was rebuilt after the full-page
+Settings tab was added, and it was verified against the working tree: every
+file listed in `shared.js`'s `CONTENT_FILES`/`CONTENT_CSS` is present in the
+ZIP, `options/options.html` is present (the manifest points at it and a
+missing file would break the settings tab on first open), and every packaged
+file is byte-identical to its source. It contains only the runtime files:
+`manifest.json`, `background.js`, `shared.js`, `content.css`, `content/`,
+`popup/`, `options/`, and `icons/*.png`. `README.md`, `PRIVACY_POLICY.md`,
+`STORE_LISTING.md`, `CHECKLIST_README.md`, `tests/`, `docs/`,
+`icons/icon.svg`, and `promo/` are dev-only and intentionally excluded.
+
+> `shared.js` is new in 1.5.0 and is **required at runtime** — the popup,
+> the service worker, the content scripts and the settings tab all load it for
+> the injection list, origin helpers, shared defaults and panel stylesheet.
+> Omitting it breaks the extension outright, so keep it in the file list.
+> `options/` is new in 1.10.0 and is **required**: the manifest's
+> `options_ui` points at `options/options.html`, so leaving the directory out
+> makes both the popup's "All settings" button and the extensions-menu entry
+> dead on arrival.
+
+Rebuild it from the repo root with an explicit file list (never a broad
+`zip -r` of the project directory, which would ship the docs and tests):
+
+```sh
+rm -f field-inspector-v1.10.0.zip
+zip -r field-inspector-v1.10.0.zip \
+  manifest.json background.js shared.js content.css content popup options \
+  icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png
+unzip -l field-inspector-v1.10.0.zip   # confirm manifest.json is at the root
+```
+
+> **Note:** `field-inspector-v1.3.0.zip` is stale — it is missing
+> `content/domain.js`, `content/domain-builder.js`, and `content/chatter.js`
+> even though this listing advertises the Domain Builder and Chatter
+> Manager. `field-inspector-v1.4.0.zip` is complete but predates
+> `shared.js`, `field-inspector-v1.5.0.zip` predates the version probe,
+> `field-inspector-v1.6.0.zip` predates the view-stack lookup, and
+> `field-inspector-v1.7.0.zip` predates button information, and
+> `field-inspector-v1.8.0.zip` predates the theming and settings page, and
+> `field-inspector-v1.9.0.zip` predates the full-page Settings tab; all
+> would fail review against this listing. Do not upload any of them.
+> They are kept only as historical artifacts; delete them once 1.10.0 is
+> published.
 
 ## Before you submit
 

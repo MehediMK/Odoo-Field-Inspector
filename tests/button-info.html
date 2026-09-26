@@ -1,0 +1,173 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}
+.o_form_view button{margin:4px;padding:4px 10px}
+</style></head><body>
+<div class="o_form_view" data-model="res.partner" data-id="7">
+  <button type="button" class="btn btn-primary o_form_button_save" data-name="action_save" data-model="res.partner" data-id="7">Save</button>
+  <button type="button" class="btn o_form_button" data-name="action_send" data-model="res.partner" data-id="7">Send by email</button>
+  <button type="button" class="btn" data-name="%(base.action_res_partner_view_form)">Open customer form</button>
+  <button type="button" class="btn" data-name="action_discard">Discard</button>
+  <button type="button" class="btn-close" aria-label="Close">&times;</button>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+// A fake Odoo backend. The button declarations in this arch deliberately
+// carry attributes the rendered DOM does NOT have (groups=, invisible=,
+// classname=) — that gap is the whole point of the declared-in-view lookup,
+// so the test asserts those values are surfaced.
+const calls=[];
+const FORM_ARCH='<form>'+
+  '<button name="action_save" type="object" string="Save" classname="btn-primary" groups="base.group_user" invisible="state == &apos;done&apos;"/>'+
+  '<button name="action_send" type="object" confirm="Are you sure you want to send this?" groups="base.group_user,sales_team.group_sale_manager"/>'+
+  '<button name="%(base.action_res_partner_view_form)" type="action"/>'+
+  '<button name="action_discard" type="object" special="discard"/>'+
+  '<field name="child_ids"><list><button name="action_save" type="object" classname="nested"/></list></field>'+
+  '</form>';
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(){return Promise.resolve();},get(){return Promise.resolve({});}}}};
+let receiver;
+window.fetch=async(url,options)=>{
+  const body=JSON.parse(options.body);
+  const {model,method,kwargs}=body.params;
+  const key=`${model}.${method}`;
+  calls.push({key,kwargs});
+  const result=(()=>{
+    if(key==='res.partner.get_views')return {views:{form:{id:200,name:'res.partner.form',arch:FORM_ARCH}}};
+    if(key==='ir.config_parameter.get_param')return '17.0';
+    if(key==='ir.ui.view.read')return [{id:200,name:'res.partner.form',type:'form',inherit_id:[]}];
+    if(key==='ir.model.data.search_read')return [{res_id:200,module:'base',name:'view_partner_form'}];
+    return null;
+  })();
+  return {ok:true,json:async()=>({jsonrpc:'2.0',id:body.id,result})};
+};
+performance.getEntriesByType=()=>[{name:'/web/dataset/call_kw/res.partner/web_read',startTime:10}];
+</script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
+<script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const settle=()=>new Promise(r=>setTimeout(r,60));
+const {ui}=window.__FI__;
+const body=()=>ui.shadowRoot.textContent;
+const press=el=>{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));el.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));};
+const btn=label=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===label);
+const tabs=()=>[...ui.shadowRoot.querySelectorAll('.fi-tab')].map(t=>t.textContent.trim());
+// Only the active tab's content is in the DOM, so switching tabs is how a
+// test sees a non-default tab — the same way a user would.
+const openTab=title=>{const b=[...ui.shadowRoot.querySelectorAll('.fi-tab')].find(t=>t.textContent.trim()===title);if(b)b.click();return Boolean(b);};
+
+// Each button records whether its own click handler still ran, so "did the
+// extension swallow this click?" is measured rather than assumed.
+const fired={};
+for(const b of document.querySelectorAll('button')){fired[b.textContent.trim()]=false;b.addEventListener('click',()=>{fired[b.textContent.trim()]=true;});}
+
+const BASE={odooMode:true,highlight:false,formView:true,listView:true,showSensitiveValues:false};
+
+// --- default (intercepting) mode: a button click stays a real button click ---
+message('FI_ENABLE',{...BASE,interceptClicks:true});
+press(btn('Save'));
+check(fired['Save']===true,'The button still receives its click in the default mode');
+check(!ui.isPanelOpen(),'No button panel opens on a default-mode click');
+press(btn('×'));
+check(fired['×']===true,'A modal close button is never hijacked');
+
+// --- click-through mode: buttons become inspectable ---
+message('FI_UPDATE_SETTINGS',{interceptClicks:false});
+press(btn('Save'));await settle();
+check(ui.isPanelOpen(),'Click-through mode opens the panel for a button');
+check(ui.lastInfo.kind==='button','The element resolves as kind=button');
+check(fired['Save']===true,'Click-through still lets the button act');
+check(ui.lastInfo.nameAttr==='action_save','Method name is read from the DOM data-name');
+check(ui.lastInfo.domType==='button','The rendered button has the HTML type, not Odoo\'s');
+check(ui.lastInfo.buttonType==='','The HTML type is not mistaken for Odoo type=object');
+check(ui.lastInfo.recordModel==='res.partner'&&ui.lastInfo.recordId==='7','data-model/data-id are read as the target record');
+check(tabs().includes('Button'),'Panel has a Button tab');
+check(tabs().some(t=>t.includes('Selectors')),'Panel has a Selectors tab');
+check(body().includes('Calls Method')&&body().includes('action_save'),'Panel shows which method it calls');
+check(body().includes('object — calls a Python method'),'The object/action type comes from the view, and is explained');
+check(ui.shadowRoot.querySelector('#fi-kind-badge').textContent==='Odoo Button','Badge says Odoo Button');
+
+// --- no ir.model.fields request: a button has no field ---
+check(!calls.some(c=>c.key==='ir.model.fields.search_read'),'No ir.model.fields lookup is made for a button');
+
+// --- declared in view: attributes the DOM does not have ---
+check(ui.lastInfo.odooViewAttrs.attrs.groups==='base.group_user','groups= is read from the view, not the DOM');
+check(ui.lastInfo.odooViewAttrs.attrs.classname==='btn-primary','classname= is read from the view');
+check(ui.lastInfo.odooViewAttrs.attrs.invisible==="state == 'done'",'invisible= is read from the view');
+check(!btn('Save').hasAttribute('groups'),'The rendered button really does lack these attributes');
+check(tabs().includes('Odoo View'),'Panel has an Odoo View tab for the button');
+check(openTab('Odoo View'),'The Odoo View tab can be opened');
+check(body().includes('Declared In Current View'),'Panel labels the declared-in-view block');
+check(body().includes('base.view_partner_form'),'Panel shows the view XML ID the button belongs to');
+check(body().includes('base.group_user'),'Panel renders the groups attribute');
+openTab('Button');
+
+// action_save is declared twice (form + nested one2many sub-view): the
+// least-nested declaration must win, or the panel describes a sub-view button.
+check(ui.lastInfo.odooViewAttrs.attrs.classname!=='nested','The nested sub-view declaration does not win');
+check(ui.lastInfo.odooViewAttrs.occurrences===2,'Both declarations are counted');
+
+// --- confirm / action / special buttons ---
+press(btn('Send by email'));await settle();
+check(ui.lastInfo.confirmText==='','The rendered DOM does not keep confirm');
+check(body().includes('Are you sure you want to send this?'),'Confirm text is recovered from the view');
+check(body().includes('Asks for confirmation first'),'Panel warns that the button confirms first');
+
+press(btn('Open customer form'));await settle();
+check(ui.lastInfo.actionReference==='%(base.action_res_partner_view_form)','A %(xml_id) action reference is recognised as an action, not a method');
+check(body().includes('Action Reference'),'Panel labels it an action reference');
+check(body().includes('navigates away'),'Panel warns that the button navigates');
+check(!body().includes('Calls Method'),'An action button is not reported as calling a method');
+
+press(btn('Discard'));await settle();
+check(ui.lastInfo.special==='','The rendered DOM does not keep special=');
+check(body().includes('Odoo built-in button'),'special= is recovered from the view and explained as framework behaviour');
+
+// --- a button with no view declaration (the modal close) stays excluded ---
+press(btn('×'));await settle();
+check(ui.lastInfo===null||ui.lastInfo.kind!=='button','A non-Odoo close button is not treated as an Odoo button');
+
+// --- Field Finder: inspect a button without clicking it, in either mode ---
+message('FI_UPDATE_SETTINGS',{interceptClicks:true});
+// The floating button opens the options menu; the finder is the "search"
+// action inside it, exactly as a user reaches it.
+ui.finderBtnEl.click();
+check(ui.isOptionsOpen(),'The floating button opens the options menu');
+ui.optionsPanelEl.querySelector('[data-option="search"]').click();
+check(ui.isFinderOpen(),'The search option opens the Field Finder');
+const found=ui.finderFields.filter(f=>f.kind==='button').map(f=>f.label);
+check(found.includes('Save')&&found.includes('Send by email'),'Field Finder indexes Odoo buttons');
+check(!found.includes('×'),'Field Finder does not index the modal close button');
+const saveEntry=ui.finderFields.find(f=>f.kind==='button'&&f.label==='Save');
+const clicksBefore=fired['Save'];
+ui.onFinderSelect(saveEntry);await settle();
+check(ui.lastInfo.kind==='button'&&ui.lastInfo.nameAttr==='action_save','Finder selection opens the button panel');
+check(fired['Save']===clicksBefore,'Finder selection inspects a button WITHOUT pressing it');
+check(tabs().includes('Button'),'Finder-selected button renders the Button tab');
+
+// --- privacy gate: Odoo mode off means no requests and no Odoo View tab ---
+calls.length=0;
+message('FI_UPDATE_SETTINGS',{odooMode:false,interceptClicks:false});
+press(btn('Save'));await settle();
+check(calls.length===0,'Zero Odoo RPCs for a button while Odoo Developer Mode is off');
+check(!tabs().includes('Odoo View'),'No Odoo View tab when the mode is off');
+check(body().includes('Turn on Odoo Developer Mode'),'Panel explains the mode is off and what it would add');
+message('FI_UPDATE_SETTINGS',{odooMode:true});
+
+// --- copy text ---
+press(btn('Send by email'));await settle();
+const copy=ui.buildCopyAllText(ui.lastInfo,'text');
+check(copy.includes('Field Inspector — Odoo Button'),'Copy-all text labels a button');
+check(copy.includes('Calls Method: action_send'),'Copy-all text includes the method');
+check(copy.includes('Button Type: object'),'Copy-all text reports the view-derived type, not the HTML one');
+check(copy.includes('Confirm Text:'),'Copy-all text includes the confirm text');
+check(copy.includes('Active View XML ID: base.view_partner_form'),'Copy-all text includes the view XML ID');
+check(copy.includes('base.group_user'),'Copy-all text includes the view-level groups');
+
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.getElementById('result').textContent='FAIL: '+error.stack);
+</script></body></html>

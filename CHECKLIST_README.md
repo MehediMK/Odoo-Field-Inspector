@@ -4,6 +4,33 @@ A practical development and release checklist, with examples from **Odoo Field I
 
 Work through the stages in order. Check an item only after completing and verifying it; mark irrelevant items as `N/A` with a reason. Unchecked boxes are a reusable checklist, not a claim that this project has no completed work.
 
+## 0. Working rule: features and docs ship together
+
+A feature is not finished when the code works — it is finished when the
+documentation describes it. After implementing any feature, update every
+affected file in the same change, before it is called done:
+
+- `README.md` — feature bullet, any behavior/safety section it
+  contradicts, project structure, test files, and the testing checklist.
+- `PRIVACY_POLICY.md` **and** `docs/privacy.html` together, if the
+  feature changes what is read, stored, or transmitted.
+- `STORE_LISTING.md` — listing description, disclosures, permission
+  justifications, and the Package section.
+- `docs/index.html` — the public landing page's feature cards.
+- The in-product copy users read at runtime: the popup's About &
+  Privacy text, and any in-panel hints the feature adds or retires.
+- `CHECKLIST_README.md` — this file, plus a release record row when
+  a version is cut.
+- `manifest.json` version, then rebuild and re-verify the release ZIP
+  (Chrome Web Store rejects an upload at a version it already has).
+- Tests — a feature that can be observed in a fixture gets one.
+
+Two rules that make this less error-prone: never leave a user-facing
+claim ("never modifies your data", "nothing leaves your browser") standing
+after a feature makes it false — qualify the claim in the same change
+that breaks it; and keep `PRIVACY_POLICY.md` and `docs/privacy.html` in
+sync, because the policy commits to publishing both.
+
 ## 1. Define the extension
 
 - [ ] Identify the target users and the problem to solve.
@@ -30,12 +57,17 @@ Work through the stages in order. Check an item only after completing and verify
 ### This project’s layout
 
 ```text
-manifest.json       Extension metadata and permissions
-background.js       Service worker and toolbar badge state
-popup/              Popup HTML, CSS, and settings controller
+manifest.json       Extension metadata, permissions, options_ui
+background.js       Service worker, toolbar badge state, per-site auto-enable
+shared.js           Injection file list, origin helpers, shared defaults,
+                    panel stylesheet + palettes (popup + worker + content + options)
+popup/              Popup HTML, CSS, and quick-settings controller
+options/            Full settings page: declarative spec, live panel preview,
+                    remembered-sites manager (opened in a tab via options_ui)
 content/            Detection, Odoo requests, inspection UI, and utilities
 content.css         Page highlighting styles
 icons/              Extension icons
+tests/              Unit + headless-browser fixtures; exclude from the ZIP
 store-assets/       Store images; exclude from the runtime ZIP
 README.md           This checklist; exclude from the runtime ZIP
 ```
@@ -58,9 +90,10 @@ README.md           This checklist; exclude from the runtime ZIP
 | --- | --- |
 | `activeTab` | Access the current tab after user activation. |
 | `scripting` | Inject the inspector’s scripts and styles on demand. |
-| `storage` | Save inspection preferences locally. |
+| `storage` | Save inspection preferences locally, plus the origin list for per-site auto-enable. |
+| `optional_host_permissions`: `http://*/*`, `https://*/*` | Declared but **grants nothing by default**. Chrome requests one exact origin only when the user ticks “Auto-enable on this site”, and the extension uses it solely to re-inject the inspector on page loads there. Revoked via the popup’s Remove button or from `chrome://extensions`; the worker re-checks the grant on every load. |
 
-The current manifest requests no persistent host permissions. Review this table whenever the manifest changes.
+The manifest requests no persistent host permissions and no blanket `host_permissions`. Optional host access is the one way the extension can run without a fresh popup click, so it is opt-in per origin, visible to the user, and revocable. Review this table whenever the manifest changes.
 
 ## 4. Implement the core workflow
 
@@ -96,9 +129,9 @@ The current manifest requests no persistent host permissions. Review this table 
 ## 5. Review security and privacy
 
 - [ ] Inventory every data source, storage location, and network destination.
-- [ ] Decide whether reading current and default field values is necessary.
-- [ ] Exclude or minimize sensitive values wherever they are unnecessary.
-- [ ] Review password fields, hidden inputs, HTML previews, and clipboard output for sensitive data exposure.
+- [x] Decide whether reading current and default field values is necessary.
+- [x] Exclude or minimize sensitive values wherever they are unnecessary.
+- [x] Review password fields, hidden inputs, HTML previews, and clipboard output for sensitive data exposure.
 - [ ] Escape untrusted strings before rendering them as HTML.
 - [ ] Avoid executing page-provided strings as code.
 - [ ] Review bundled dependencies and remove unused code.
@@ -109,7 +142,7 @@ The current manifest requests no persistent host permissions. Review this table 
 - [ ] Publish a privacy policy at a publicly accessible URL.
 - [ ] Include a real support contact and an updated date.
 
-**Current project consideration:** The inspector reads input values without excluding password inputs. Its actual data handling can therefore include sensitive information. Resolve unnecessary access or disclose the behavior accurately before publication. Live metadata requests go to the current Odoo server using the existing session; do not claim the extension never contacts a server.
+**Current project consideration:** Sensitive values (password inputs, hidden token/CSRF fields, and secret-named attributes) are redacted at info-build time, so they never reach the panel, Copy All, JSON output, or the Recent Fields cache unless the user turns on "Show sensitive values". Ordinary field values are still read and displayed. Click interception is on by default and keeps the extension from changing form data; with "Intercept clicks" turned off the user's clicks reach the page normally, which is documented in the popup, README, and privacy policy. Live metadata requests go to the current Odoo server using the existing session; do not claim the extension never contacts a server.
 
 Google requires disclosure of user-data handling even when processing or storage stays on the device. See the [User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
@@ -184,7 +217,7 @@ These screenshots show the actual inspection panel rendered on a labeled sample 
 - [ ] Set the intended release version in `manifest.json`.
 - [ ] Use a higher version for an update to an existing release.
 - [ ] Create a clean staging folder containing only runtime files.
-- [ ] Include `manifest.json`, `background.js`, `content.css`, `content/`, `popup/`, and `icons/` for this project.
+- [ ] Include `manifest.json`, `background.js`, `shared.js`, `content.css`, `content/`, `popup/`, `options/`, and `icons/` for this project. (`shared.js` is runtime code as of 1.5.0 — omitting it breaks the popup and the service worker; `options/` is runtime code as of 1.10.0 — the manifest's `options_ui` points at `options/options.html`, so omitting it breaks the settings tab and the popup's All settings button.)
 - [ ] Exclude `store-assets/`, documentation, tests, local profiles, secrets, and temporary files.
 - [ ] Verify all paths referenced by the manifest and code exist in staging.
 - [ ] Load and test the staged extension in Chrome.
@@ -245,13 +278,13 @@ Follow the current [publication workflow](https://developer.chrome.com/docs/webs
 
 | Release record | Value |
 | --- | --- |
-| Version | |
-| Source revision | |
-| Tested Chrome versions | |
-| Tested Odoo versions / environments | |
-| Test date and reviewer | |
-| Known limitations | |
-| ZIP filename | |
-| Privacy policy URL | |
+| Version | 1.10.0 (built, not yet submitted) |
+| Source revision | working tree at packaging time — commit before submitting |
+| Tested Chrome versions | current stable `google-chrome` (headless fixtures: `node tests/run-browser-tests.cjs`); no live Chrome UI pass recorded yet |
+| Tested Odoo versions / environments | none — no live Odoo instance has been used for this build. The 17+ deep-link shape (`/odoo/action-…?active_id=…`) and the `base.action_ui_view` view-record link are asserted against a stubbed backend only and have **not** been opened in a real Odoo 17+ admin; likewise the `ir.model.data` XML-ID resolution and the `ir.ui.view` inherit walk |
+| Test date and reviewer | 2026-09-26 — automated fixtures only (9 browser fixtures, 11 fixture runs, 485 assertions, plus 26 Node tests). The settings fixture is loaded three times (plain, `?debug=1`, `?debug=0`) to prove the URL override in both directions, and the new options-page fixture is run once per pass. Five real defects were found by those fixtures during 1.10.0 development rather than in review: the options page never received the accent variables, the accent swatches lagged one change behind the theme, an OS theme flip did not re-tint them, the page ignored `fiRememberedOrigins` changes (so an already-remembered site asked for permission a second time), and `state.resolved` was a hand-written second copy of the appearance defaults. Fifteen mutations were each confirmed to fail the suite — dropping the options page's root `applyThemeVars`, ignoring remembered-site storage changes, making swatch fills static, removing `syncControls()` from the system-theme handler, emitting the invalid `:root([attr])` palette selector, removing each of the `normalizeOrigin` guards in turn (the two scheme guards are belt-and-braces: each survives alone, both removed fails), removing the manifest `open_in_tab`, dropping the popup's All settings button, dropping a row from the options spec, and stopping `options.html` from loading `shared.js` — so the new assertions are not vacuous. The headless runner retries once on a launch that returns no DOM at all, which is a known cold-profile Chrome flake and not a test result |
+| Known limitations | the panel's default Theme is **System**, so it can look dark on a dark OS and light on a light OS — that is the point of System, and Light/Dark override it; the six accents recolor the extension's own UI and the outlines it draws, not the host page; `?debug=1`/`?debug=0` are read from the **query string** only, so `/web#debug=1` is ignored, and the URL override is intentionally not persisted; a button is inspectable only in click-through mode or via the Field Finder, never by a normal click (by design — Save/Delete are not hijacked); the button's `type`/`special`/`confirm`/`groups` come from the view declaration, so they are reported as unknown when Odoo Developer Mode is off or that declaration cannot be read, and a button renamed by translation is matched by its technical name, not its visible text; nested domain groups unsupported; a field's definition is attributed to the whole view stack, not to one ancestor XML file, because ancestor `arch_db` is never downloaded; the inspector is re-enabled after each navigation **unless** the user opts into per-site auto-enable; click-through mode may leave "Jump to element" pointing at a node Odoo re-rendered; per-site auto-enable cannot be granted for `file://` pages; an auto-enabled tab stays off until the tab is closed or moved to another origin after a manual disable; an unreadable Odoo version yields both deep-link styles rather than a verified single one; the full Settings tab is exercised only through a headless fixture with stubbed `chrome.storage`/`chrome.permissions`, never opened in a real browser tab, and the permission prompt it triggers has only been observed as a recorded call |
+| ZIP filename | `field-inspector-v1.10.0.zip` (verified: 22 files, all `CONTENT_FILES`/`CONTENT_CSS` present and byte-identical to source, every manifest path — including `options/options.html` — resolves, `manifest.json` at the root, no docs/tests leaked) |
+| Privacy policy URL | https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html |
 | Submission date | |
 | Store listing URL | |

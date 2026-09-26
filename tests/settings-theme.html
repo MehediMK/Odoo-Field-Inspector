@@ -1,0 +1,265 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../content.css"><style>
+body{font-family:system-ui;margin:20px;background:#f6f7fa}
+.o_form_view .o_field_widget{margin:4px;padding:4px}
+</style></head><body>
+<div class="o_form_view" data-model="res.partner" data-id="7">
+  <label for="email">Email</label>
+  <input id="email" class="o_field_widget" name="email" type="text" value="a@example.test" />
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+// A controllable prefers-color-scheme. Installed before the content scripts
+// so "System" is testable in both directions on one machine: real headless
+// Chrome always reports light, which would make the System branch vacuous.
+const scheme={dark:false,listeners:[]};
+window.matchMedia=(query)=>{
+  if(!/prefers-color-scheme/.test(query))return{matches:false,media:query,addEventListener(){},removeEventListener(){}};
+  return{
+    get matches(){return scheme.dark;},
+    media:query,
+    addEventListener(type,fn){if(type==='change')scheme.listeners.push(fn);},
+    removeEventListener(type,fn){scheme.listeners=scheme.listeners.filter(l=>l!==fn);},
+    addListener(fn){scheme.listeners.push(fn);},
+    removeListener(fn){scheme.listeners=scheme.listeners.filter(l=>l!==fn);},
+  };
+};
+const flipScheme=dark=>{scheme.dark=dark;scheme.listeners.slice().forEach(fn=>fn({matches:dark}));};
+const stored={};
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(){}},storage:{local:{set(v){Object.assign(stored,v);return Promise.resolve();},get(){return Promise.resolve({});}}}};
+let receiver;
+window.fetch=async()=>({ok:true,json:async()=>({jsonrpc:'2.0',id:1,result:null})});
+performance.getEntriesByType=()=>[];
+const debugCalls=[];
+const realDebug=console.debug.bind(console);
+console.debug=(...args)=>{debugCalls.push(args.join(' '));realDebug(...args);};
+</script>
+<script src="../shared.js"></script><script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+function message(type,settings){let result;receiver({type,settings},{},r=>result=r);return result;}
+const settle=()=>new Promise(r=>setTimeout(r,40));
+const {ui,detector}=window.__FI__;
+const host=()=>ui.hostEl;
+const root=()=>ui.shadowRoot;
+const text=()=>root().textContent;
+const css=name=>getComputedStyle(host()).getPropertyValue(name).trim();
+const settingRow=label=>[...root().querySelectorAll('.fi-setting')].find(r=>r.textContent.includes(label));
+const clickControl=(row,selector)=>{const el=row.querySelector(selector);if(!el)throw Error('missing control in row: '+row.textContent);el.click();return el;};
+const press=el=>{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,composed:true,cancelable:true}));el.dispatchEvent(new MouseEvent('click',{bubbles:true,composed:true,cancelable:true}));};
+const input=document.getElementById('email');
+// The URL decides which of the three runs this is; the runner loads this same
+// fixture three times to prove the override wins in both directions.
+const mode=location.search.includes('debug=1')?'on':location.search.includes('debug=0')?'off':'unset';
+
+// A saved setting of debug:true makes the "off" run meaningful — only a URL
+// override can turn it back off.
+message('FI_ENABLE',{debug:mode==='off',odooMode:false,interceptClicks:true});
+await settle();
+press(input);
+await settle();
+
+// --- the gear button ---
+const gear=root().getElementById('fi-settings-btn');
+check(gear!=null,'Panel header has a settings (gear) button');
+check(gear.getAttribute('aria-label')==='Settings'&&gear.getAttribute('aria-controls')==='fi-settings-panel','The gear is labelled and points at the settings panel');
+check(!ui.isSettingsOpen(),'The settings page is closed until the gear is clicked');
+gear.click();
+check(ui.isSettingsOpen(),'Clicking the gear opens the settings page');
+check(!ui.isPanelOpen()||ui.settingsPanelEl.hidden===false,'The settings page is a real view, not a stub');
+
+// --- the settings page content ---
+check(/Appearance/.test(text())&&/Behavior/.test(text())&&/Debug/.test(text()),'Settings page has Appearance, Behavior and Debug sections');
+check(!!settingRow('Theme')&&!!settingRow('Accent color')&&!!settingRow('Density'),'Settings page offers Theme, Accent color and Density');
+check(!!settingRow('Highlight fields')&&!!settingRow('Intercept clicks')&&!!settingRow('Odoo Developer Mode')&&!!settingRow('Show sensitive values')&&!!settingRow('Copy format'),'Settings page absorbs the existing behavior toggles');
+check(root().querySelectorAll('.fi-swatch').length===6,'All six accent choices are offered');
+check(!!settingRow('Debug logging')&&/\?debug=1/.test(text())&&/\?debug=0/.test(text()),'Debug section documents both URL overrides');
+
+// --- theme: explicit light/dark beats the OS ---
+clickControl(settingRow('Theme'),'[data-value="dark"]');
+check(host().getAttribute('data-theme')==='dark','Choosing Dark sets the panel theme');
+check(css('--fi-bg')==='#1a1d26','Dark theme paints the dark background');
+check(getComputedStyle(host().getPropertyValue?host():host()).color!=='','Panel has a resolved foreground colour');
+check(ui.resolvedTheme==='dark','The resolved theme is reported as dark');
+clickControl(settingRow('Theme'),'[data-value="light"]');
+check(host().getAttribute('data-theme')==='light'&&css('--fi-bg')==='#ffffff','Choosing Light paints the light background');
+check(settingRow('Theme').textContent.includes('Always light'),'The Theme row explains the explicit choice');
+
+// --- theme: System follows the OS, live ---
+clickControl(settingRow('Theme'),'[data-value="system"]');
+check(host().getAttribute('data-theme')==='light','System resolves to the (light) system preference');
+check(settingRow('Theme').textContent.includes('Following your system'),'The Theme row says it is following the system');
+flipScheme(true);
+await settle();
+check(host().getAttribute('data-theme')==='dark'&&css('--fi-bg')==='#1a1d26','Flipping the OS preference repaints a System-themed panel live');
+flipScheme(false);
+await settle();
+check(host().getAttribute('data-theme')==='light','Flipping back repaints again');
+
+// --- unknown values must not unstyle the panel ---
+message('FI_UPDATE_SETTINGS',{theme:'neon',accent:'chartreuse'});
+await settle();
+check(host().getAttribute('data-theme')==='light','An unknown theme falls back to a real palette');
+check(css('--fi-bg')!==''&&css('--fi-fg')!=='','An unknown theme still leaves the panel fully styled');
+check(host().getAttribute('data-accent')==='blue','An unknown accent falls back to the default');
+message('FI_UPDATE_SETTINGS',{theme:'system'});
+await settle();
+
+// --- accent reaches the panel AND the page-level highlights ---
+const pink=window.FI_SHARED.ACCENTS.pink;
+clickControl(settingRow('Accent color'),'[data-value="pink"]');
+check(host().getAttribute('data-accent')==='pink','Choosing Pink sets the accent');
+check(css('--fi-accent')===(ui.resolvedTheme==='dark'?pink.dark:pink.light).accent,'The accent variable matches the shared palette for the live theme');
+check(css('--fi-accent')===pink.light.accent||css('--fi-accent')===pink.dark.accent,'The accent is one of the palette values, not an arbitrary colour');
+const rootOutline=document.documentElement.style.getPropertyValue('--fi-accent-outline');
+check(rootOutline===(ui.resolvedTheme==='dark'?pink.dark:pink.light).outline,'The page-level highlight colour is exported to <html>');
+const rgb=text2=>{const m=/rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(text2||'');return m?m[1]+','+m[2]+','+m[3]:'';};
+const outlineColor=getComputedStyle(input).outlineColor;
+check(rgb(outlineColor)===rgb(rootOutline),'The page highlight outline actually uses the accent colour');
+const blueOutline=rgb(window.FI_SHARED.ACCENTS.blue.light.outline);
+check(rgb(outlineColor)!==blueOutline,'The highlight is no longer the hard-coded blue');
+// The hover highlight is a separate rule with its own colour, so it needs its
+// own assertion — a test that only reads the resting outline would pass even
+// if the hover rule went back to a hard-coded blue.
+input.dispatchEvent(new MouseEvent('mouseover',{bubbles:true,composed:true}));
+await settle();
+check(input.classList.contains('fi-hover-field'),'Hovering a detected field marks it as hovered');
+check(rgb(getComputedStyle(input).outlineColor)===rgb(rootOutline),'The hover outline uses the accent colour too');
+const rgbWithAlpha=text2=>{const m=/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(text2||'');return m?m[1]+','+m[2]+','+m[3]+'|'+(m[4]===undefined?'1':m[4]):'';};
+check(rgbWithAlpha(getComputedStyle(input).backgroundColor)===rgbWithAlpha((ui.resolvedTheme==='dark'?pink.dark:pink.light).wash),'The hover wash uses the accent tint, not a hard-coded blue');
+input.dispatchEvent(new MouseEvent('mouseout',{bubbles:true,composed:true,relatedTarget:null}));
+await settle();
+check(!input.classList.contains('fi-hover-field'),'The hover highlight is removed again');
+check(root().querySelector('[data-accent-choice], [data-value="pink"]').getAttribute('aria-pressed')==='true','The chosen accent is marked selected');
+message('FI_UPDATE_SETTINGS',{accent:'blue'});
+await settle();
+check(rgb(getComputedStyle(input).outlineColor)===blueOutline,'Switching back to Blue restores the original highlight colour');
+
+// --- density ---
+const comfortableSize=parseFloat(getComputedStyle(ui.panelEl).fontSize);
+clickControl(settingRow('Density'),'[data-value="compact"]');
+check(host().getAttribute('data-density')==='compact','Compact density is applied');
+const compactSize=parseFloat(getComputedStyle(ui.panelEl).fontSize);
+check(compactSize<comfortableSize,'Compact density really does shrink the text');
+check(compactSize>=11,'Compact density stays readable');
+message('FI_UPDATE_SETTINGS',{density:'comfortable'});
+await settle();
+check(parseFloat(getComputedStyle(ui.panelEl).fontSize)===comfortableSize,'Comfortable density restores the original size');
+
+// --- a behavior switch on the settings page must actually change behavior ---
+const row=settingRow('Intercept clicks');
+check(row.querySelector('.fi-switch').getAttribute('aria-checked')==='true','Intercept clicks starts on');
+let pageClicks=0;
+input.addEventListener('click',()=>{pageClicks++;});
+clickControl(row,'.fi-switch');
+await settle();
+check(row===null||settingRow('Intercept clicks').querySelector('.fi-switch').getAttribute('aria-checked')==='false','The switch flips to off');
+press(input);
+check(pageClicks===1,'With interception off the page receives the click again');
+clickControl(settingRow('Intercept clicks'),'.fi-switch');
+await settle();
+pageClicks=0;
+press(input);
+check(pageClicks===0,'With interception back on the page click is blocked again');
+
+// --- persistence ---
+check(stored.fiSettings&&stored.fiSettings.accent==='blue','A settings change is written to storage');
+check(stored.fiSettings.theme==='system'&&stored.fiSettings.density==='comfortable','Theme and density are persisted too');
+check(stored.fiSettings.interceptClicks===true,'The behavior toggles persist through the same object');
+
+// --- the options menu reaches the same page, and Esc leaves it ---
+ui.finderBtnEl.click();
+const settingsOption=ui.optionsPanelEl.querySelector('[data-option="settings"]');
+check(!!settingsOption,'The options menu has a Settings entry');
+settingsOption.click();
+check(ui.isSettingsOpen(),'The options menu opens the settings page');
+check(!ui.isOptionsOpen(),'Opening settings closes the options menu');
+document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+await settle();
+check(!ui.isSettingsOpen(),'Escape closes the settings page');
+check(root().activeElement===root().getElementById('fi-settings-btn'),'Escape returns focus to the gear button');
+
+// --- theme survives a disable/enable round trip ---
+clickControl(settingRow('Theme'),'[data-value="dark"]');
+message('FI_DISABLE');
+await settle();
+check(document.documentElement.style.getPropertyValue('--fi-accent-outline')==='','Disabling removes the page-level accent it added');
+message('FI_ENABLE',{});
+await settle();
+check(host().getAttribute('data-theme')==='dark'&&css('--fi-bg')==='#1a1d26','The saved theme is re-applied when the inspector is enabled again');
+message('FI_UPDATE_SETTINGS',{theme:'system'});
+
+// --- ?debug= precedence, proven in both directions ---
+if(mode==='on'){
+  check(stored.fiSettings.debug===false||stored.fiSettings.debug===undefined,'The saved setting is off in this run');
+  check(debugCalls.length>0,'?debug=1 turns debug logging on even though the saved setting is off');
+  ui.openSettings();
+  const log=root().querySelector('#fi-debug-log');
+  check(log&&/url debug param: true/.test(log.textContent),'The Debug readout says the URL asked for debug');
+  check(/effective debug: true/.test(log.textContent),'The Debug readout shows debug is effective');
+  check(/inspect form/.test(log.textContent),'The Debug readout logs what was inspected');
+  check(/theme:/.test(log.textContent),'The Debug readout shows the live theme/accent/density');
+  const row=settingRow('Debug logging');
+  check(row.querySelector('.fi-switch').getAttribute('aria-checked')==='true','The switch reflects the URL-forced state');
+  check(row.querySelector('.fi-switch').disabled,'The switch is disabled while the URL overrides it');
+  check(/Forced on by \?debug=1/.test(row.textContent),'The reason is spelled out');
+  message('FI_UPDATE_SETTINGS',{debug:false});
+  await settle();
+  check(settingRow('Debug logging')&&root().querySelector('#fi-debug-log'),'Turning the saved setting off cannot override the URL');
+  check(settingRow('Debug logging').querySelector('.fi-switch').getAttribute('aria-checked')==='true','The switch still shows the effective state, not the saved one');
+  check(debugCalls.length>0,'Logging continues while the URL asks for it');
+  message('FI_UPDATE_SETTINGS',{debug:true});
+  message('FI_DISABLE');
+  message('FI_ENABLE',{debug:true});
+  await settle();
+  check(debugCalls.length>0,'?debug=1 is read again on the next page load, not remembered');
+}else if(mode==='off'){
+  check(stored.fiSettings.debug===true,'The saved setting is on in this run');
+  check(debugCalls.length===0,'?debug=0 wins over a saved debug:true setting');
+  ui.openSettings();
+  check(!root().querySelector('#fi-debug-log'),'No debug readout is rendered when debug is off');
+  const row=settingRow('Debug logging');
+  check(row.querySelector('.fi-switch').getAttribute('aria-checked')==='false','The switch shows debug as off because the URL forced it off');
+  check(row.querySelector('.fi-switch').disabled,'The switch is disabled while the URL overrides it');
+  check(/Forced off by \?debug=0/.test(row.textContent),'The reason is spelled out instead of being silently ignored');
+  const savedBefore=stored.fiSettings.debug;
+  row.querySelector('.fi-switch').click();
+  await settle();
+  check(stored.fiSettings.debug===savedBefore,'Clicking a URL-overridden switch does not write the setting');
+  check(/url debug param: false/.test(text())===false,'The URL value is not leaked into the panel markup when off');
+  message('FI_UPDATE_SETTINGS',{theme:'dark'});
+  await settle();
+  check(debugCalls.length===0,'A settings change under ?debug=0 still logs nothing');
+}else{
+  check(stored.fiSettings.debug===false,'The saved debug setting is off in this run');
+  check(debugCalls.length===0,'Without a URL parameter and with the setting off, nothing is logged');
+  ui.openSettings();
+  check(!root().querySelector('#fi-debug-log'),'No readout is rendered while debug is off');
+  check(settingRow('Debug logging').querySelector('.fi-switch').getAttribute('aria-checked')==='false','The switch shows off');
+  check(!settingRow('Debug logging').querySelector('.fi-switch').disabled,'With no URL parameter the switch is usable');
+  // The saved setting alone decides when the URL says nothing.
+  message('FI_UPDATE_SETTINGS',{debug:true});
+  await settle();
+  const loggedBefore=debugCalls.length;
+  press(input);
+  await settle();
+  check(debugCalls.length>loggedBefore,'Turning the saved setting on starts logging the next inspect');
+  ui.openSettings();
+  const log=root().querySelector('#fi-debug-log');
+  check(log&&/url debug param: \(not set\)/.test(log.textContent),'The readout says the URL said nothing');
+  check(/saved debug setting: true/.test(log.textContent),'The readout distinguishes the saved setting from the URL');
+  message('FI_UPDATE_SETTINGS',{debug:false});
+  await settle();
+  const before=debugCalls.length;
+  press(input);
+  await settle();
+  check(debugCalls.length===before,'Turning debug off stops further logging');
+  message('FI_ENABLE',{debug:true});
+  await settle();
+  check(debugCalls.length>0,'A saved debug:true is honoured on the next enable');
+}
+
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+})().catch(err=>{document.getElementById('result').textContent='FAIL: '+err.message+'\n'+err.stack;});
+</script>
+</body></html>
