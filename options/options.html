@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Field Inspector — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="op-page">
+    <header class="op-header">
+      <div class="op-title">
+        <span class="op-logo" aria-hidden="true">🔍</span>
+        <span>Field Inspector</span>
+      </div>
+      <div class="op-header-right">
+        <span class="op-version" id="op-version"></span>
+      </div>
+    </header>
+
+    <main class="op-main">
+      <section class="op-card op-preview-card">
+        <h2 class="op-card-title">Live preview</h2>
+        <p class="op-hint" id="op-preview-note">
+          This is the inspector panel itself, drawn with its real stylesheet —
+          not a mock-up. Change the theme, accent or density below and the panel
+          repaints the way it will on a page.
+        </p>
+        <div class="op-preview-frame">
+          <div id="op-preview" class="op-preview-host"></div>
+        </div>
+        <p class="op-hint" id="op-preview-state"></p>
+      </section>
+
+      <div class="op-settings" id="op-settings">
+        <!-- Every setting is rendered here from the spec in options.js, which
+             reads the keys from shared.js's DEFAULT_SETTINGS. Nothing in this
+             file has to be edited to add a setting. -->
+      </div>
+
+      <section class="op-card" id="op-sites">
+        <h2 class="op-card-title">Auto-enable sites</h2>
+        <p class="op-hint">
+          At each site listed here, the inspector starts by itself on every page
+          you load. Chrome is asked for access to that one site only, and
+          removing a site here hands that access straight back.
+        </p>
+        <div class="op-site-list" id="op-site-list"></div>
+        <form class="op-site-add" id="op-site-form">
+          <label class="op-label" for="op-site-input">Add a site</label>
+          <div class="op-site-add-row">
+            <input
+              class="op-input"
+              id="op-site-input"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="https://erp.example.com"
+            />
+            <button class="op-btn op-btn-primary" type="submit" id="op-site-add-btn">Add site</button>
+          </div>
+          <p class="op-hint" id="op-site-hint"></p>
+        </form>
+      </section>
+
+      <section class="op-card" id="op-privacy">
+        <h2 class="op-card-title">Privacy</h2>
+        <ul class="op-list">
+          <li>The panel reads the page you are looking at, inside your browser.</li>
+          <li>Every setting on this page is stored locally in <code>chrome.storage.local</code> and is never transmitted.</li>
+          <li>Nothing leaves your browser except what you explicitly enable with <strong>Odoo Developer Mode</strong>: the clicked field's model and technical name, one fixed server setting used to detect your Odoo version, and — for an Odoo button or a view — its declaration, all sent to the same Odoo server you are already logged into.</li>
+          <li><code>?debug=1</code> or <code>?debug=0</code> in a page's URL is read only in that page's own tab, is never stored, and cannot enable the inspector by itself.</li>
+        </ul>
+        <p><a class="op-link" id="op-privacy-link" href="https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html" target="_blank" rel="noreferrer noopener">Read the full privacy policy</a></p>
+      </section>
+    </main>
+
+    <footer class="op-footer">
+      <span id="op-footer-note">Settings are saved as you change them.</span>
+    </footer>
+  </div>
+
+  <!-- shared.js first: it owns DEFAULT_SETTINGS, the palettes, the icons and
+       the panel stylesheet this page previews. -->
+  <script src="../shared.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

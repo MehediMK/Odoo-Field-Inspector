@@ -3,9 +3,14 @@
  *
  * Depends on window.__FI__.utils (utils.js, loaded first).
  * Exposes window.__FI__.detector with:
- *   - resolveInspectable(target, settings) -> { kind: 'form'|'list', el } | null
- *   - buildFormFieldInfo(el) -> plain object describing a form field
+ *   - resolveInspectable(target, settings) -> { kind: 'form'|'list'|'listCell'|'button', el } | null
+ *   - buildFormFieldInfo(el, opts) -> plain object describing a form field
+ *     (sensitive values are redacted unless opts.showSensitiveValues)
  *   - buildColumnInfo(el)    -> plain object describing a table/list column
+ *   - buildDataCellInfo(el)  -> plain object describing one list data cell
+ *   - buildButtonInfo(el)    -> plain object describing an Odoo button
+ *     (click-through mode or Field Finder selection only — never a plain click
+ *      in the default intercepting mode)
  *   - applyHighlights(settings) / clearHighlights()
  *   - startObserving(settings) / stopObserving()
  */
@@ -19,6 +24,23 @@
   const HOVER_CLASS = "fi-hover-field";
 
   const LABEL_SELECTOR = "label";
+  // Odoo's own buttons. Deliberately NOT part of FORM_CONTROL_SELECTOR and
+  // not highlighted: a button is a control the user means to *press* (Save,
+  // Delete, a modal's Close), so hijacking its click — or even just treating
+  // it as a field — is hostile. They become inspectable in two safe ways only:
+  // click-through mode, where the user has explicitly asked for real clicks
+  // to go through, and the Field Finder, which selects without clicking.
+  const ODOO_BUTTON_SELECTOR = [
+    "button.o_form_button",
+    "button.o_list_button",
+    // Odoo renders the method/action reference as data-name and keeps the HTML
+    // type="button", so those two conventions are the reliable tells when the
+    // class is absent (action-type buttons often are).
+    'button[data-name^="action_"]',
+    'button[data-name^="%("]',
+    'button[name][type="object"]',
+    'button[name][type="action"]',
+  ].join(", ");
   const FORM_CONTROL_SELECTOR = [
     "input",
     "select",
@@ -102,6 +124,17 @@
       if (settings.listView) {
         const header = el.closest(LIST_HEADER_SELECTOR);
         if (header) return { kind: "list", el: header };
+      }
+
+      // Odoo buttons, but only in click-through mode. In the default
+      // (intercepting) mode a button click stays a real button click: the
+      // panel does not open and the event is not cancelled, so Save/Delete and
+      // a modal's Close keep working exactly as Odoo intended. Click-through
+      // mode means the user has asked for clicks to reach the page anyway, so
+      // there is nothing to protect there.
+      if (settings.formView && settings.interceptClicks === false) {
+        const button = el.closest(ODOO_BUTTON_SELECTOR);
+        if (button) return { kind: "button", el: button };
       }
 
       if (settings.formView) {
@@ -207,23 +240,26 @@
     return "unknown";
   }
 
-  function describeCurrentValue(controlEl) {
+  function describeCurrentValue(controlEl, reveal) {
     if (!controlEl) return "";
     const tag = controlEl.tagName;
+    // Redaction happens here, at the source: everything downstream (panel
+    // rows, copy-all text, JSON dump, history) only ever sees this string.
+    const redact = !reveal && utils.isSensitiveField(controlEl);
     try {
       if (tag === "INPUT") {
         const type = (controlEl.type || "text").toLowerCase();
         if (type === "checkbox" || type === "radio") {
           return `${controlEl.checked ? "Checked" : "Unchecked"}${controlEl.value ? ` (value: ${controlEl.value})` : ""}`;
         }
-        return controlEl.value;
+        return redact ? utils.REDACTED_TEXT : controlEl.value;
       }
-      if (tag === "TEXTAREA") return controlEl.value;
+      if (tag === "TEXTAREA") return redact ? utils.REDACTED_TEXT : controlEl.value;
       if (tag === "SELECT") {
         const selected = Array.from(controlEl.selectedOptions || []).map((o) => o.textContent.trim());
         return selected.join(", ");
       }
-      if (controlEl.isContentEditable) return controlEl.textContent.trim();
+      if (controlEl.isContentEditable) return redact ? utils.REDACTED_TEXT : controlEl.textContent.trim();
       const role = controlEl.getAttribute("role");
       if (role === "checkbox" || role === "switch" || role === "radio") {
         return controlEl.getAttribute("aria-checked") || "";
@@ -234,16 +270,17 @@
     }
   }
 
-  function describeDefaultValue(controlEl) {
+  function describeDefaultValue(controlEl, reveal) {
     if (!controlEl) return "";
+    const redact = !reveal && utils.isSensitiveField(controlEl);
     try {
       const tag = controlEl.tagName;
       if (tag === "INPUT") {
         const type = (controlEl.type || "text").toLowerCase();
         if (type === "checkbox" || type === "radio") return controlEl.defaultChecked ? "Checked" : "Unchecked";
-        return controlEl.defaultValue;
+        return redact ? utils.REDACTED_TEXT : controlEl.defaultValue;
       }
-      if (tag === "TEXTAREA") return controlEl.defaultValue;
+      if (tag === "TEXTAREA") return redact ? utils.REDACTED_TEXT : controlEl.defaultValue;
       if (tag === "SELECT") {
         const def = Array.from(controlEl.options || []).find((o) => o.defaultSelected);
         return def ? def.textContent.trim() : "";
@@ -254,7 +291,17 @@
     }
   }
 
-  detector.buildFormFieldInfo = function (el) {
+  /**
+   * Builds the Form Field info object.
+   *
+   * @param {Element} el  the resolved click target (label, control, or Odoo widget)
+   * @param {Object} [opts]
+   * @param {boolean} [opts.showSensitiveValues=false]  when false (default),
+   *   values belonging to password/hidden/secret-named controls are replaced
+   *   with utils.REDACTED_TEXT before they can reach the panel or clipboard.
+   */
+  detector.buildFormFieldInfo = function (el, opts) {
+    const reveal = !!(opts && opts.showSensitiveValues);
     let labelEl = null;
     let labelText = "";
     let controlEl = null;
@@ -315,6 +362,7 @@
     }
 
     const odooWidgetType = odooWidget ? getOdooWidgetType(odooWidget) : "";
+    const sensitive = !!(controlEl && utils.isSensitiveField(controlEl));
 
     return {
       kind: "form",
@@ -335,21 +383,23 @@
       odooFieldName: odooWidget ? odooWidget.getAttribute("name") || "" : "",
       classes: primary.className && typeof primary.className === "string" ? primary.className.trim() : "",
       placeholder: controlEl ? controlEl.getAttribute("placeholder") || "" : "",
-      currentValue: controlEl ? describeCurrentValue(controlEl) : isOdooReadonlyField ? odooWidget.textContent.trim() : "",
-      defaultValue: describeDefaultValue(controlEl),
+      currentValue: controlEl ? describeCurrentValue(controlEl, reveal) : isOdooReadonlyField ? odooWidget.textContent.trim() : "",
+      defaultValue: describeDefaultValue(controlEl, reveal),
+      sensitive,
+      valuesRevealed: reveal,
       required: !!(controlEl && (controlEl.required || controlEl.getAttribute("aria-required") === "true")),
       readOnly:
         isOdooReadonlyField || !!(controlEl && (controlEl.readOnly || controlEl.getAttribute("aria-readonly") === "true")),
       disabled: !!(controlEl && (controlEl.disabled || controlEl.getAttribute("aria-disabled") === "true")),
-      dataAttributes: utils.getDataAttributes(primary),
+      dataAttributes: utils.redactAttrMap(utils.getDataAttributes(primary), reveal),
       ariaAttributes: utils.getAriaAttributes(primary),
       validationAttributes: controlEl ? utils.getValidationAttributes(controlEl) : {},
-      otherAttributes: utils.getOtherAttributes(primary),
+      otherAttributes: utils.redactAttrMap(utils.getOtherAttributes(primary), reveal),
       cssSelector: utils.generateCssSelector(primary),
       xpath: utils.generateFieldXPath(primary, odooWidget && odooWidget.getAttribute("name")),
       parentElement: utils.describeParent(primary),
       owningForm: utils.describeOwningForm(primary),
-      htmlPreview: utils.truncate(primary.outerHTML || "", 320),
+      htmlPreview: utils.buildHtmlPreview(primary, 320, reveal),
       labelElementPresent: !!labelEl,
     };
   };
@@ -428,7 +478,7 @@
         headerEl.closest(".o_list_view, .o_list_renderer, .o_list_table") &&
           (headerEl.getAttribute("name") || headerEl.getAttribute("data-name") || headerEl.getAttribute("data-field"))
       ),
-      htmlPreview: utils.truncate(headerEl.outerHTML || "", 320),
+      htmlPreview: utils.buildHtmlPreview(headerEl, 320),
       relatedInput,
       table: table
         ? {
@@ -439,6 +489,60 @@
             columnCount,
           }
         : null,
+    };
+  };
+
+  /**
+   * An Odoo form/list button.
+   *
+   * A button's useful identity is not a field name but the *action* it will
+   * perform, so this reports what would actually happen on click:
+   *
+   *   - `name`  the method it calls (type="object", e.g. `action_send`) or the
+   *             action it opens (type="action", often a `%(xml_id)` reference)
+   *   - `type`  "object" vs "action" — the single most useful thing to know
+   *   - `special` for Odoo's own machinery buttons (discard, statinfo…)
+   *   - `confirm` when clicking it prompts the user first
+   *   - `data-model` / `data-id` — which record the action would run against,
+   *             which is the piece that is invisible in the view XML
+   */
+  detector.buildButtonInfo = function (buttonEl) {
+    const label = (buttonEl.textContent || "").replace(/\s+/g, " ").trim();
+    const name = buttonEl.getAttribute("name") || buttonEl.getAttribute("data-name") || "";
+    // Odoo's rendered button carries the *HTML* type ("button"), not the
+    // view's type="object"/"action" — the web client has already consumed that
+    // distinction. So only a literal object/action here is trustworthy;
+    // otherwise the view arch is the real source, and ui.js prefers it.
+    const domType = buttonEl.getAttribute("type") || "";
+    const buttonType = domType === "object" || domType === "action" ? domType : "";
+    const model = buttonEl.getAttribute("data-model") || "";
+    const recordId = buttonEl.getAttribute("data-id") || "";
+
+    return {
+      kind: "button",
+      buttonLabel: label,
+      element: buttonEl.tagName,
+      id: buttonEl.id || "",
+      // `%(xml_id)` is Odoo's action-reference syntax, not a method name —
+      // worth calling out so nobody goes looking for a Python method by it.
+      actionReference: name.includes("%(") && name.includes(")") ? name : "",
+      nameAttr: name,
+      buttonType,
+      domType,
+      special: buttonEl.getAttribute("special") || "",
+      classname: buttonEl.getAttribute("classname") || "",
+      icon: buttonEl.getAttribute("icon") || "",
+      confirmText: buttonEl.getAttribute("confirm") || "",
+      recordModel: model,
+      recordId,
+      title: buttonEl.getAttribute("title") || "",
+      classes: buttonEl.className && typeof buttonEl.className === "string" ? buttonEl.className.trim() : "",
+      dataAttributes: utils.getDataAttributes(buttonEl),
+      ariaAttributes: utils.getAriaAttributes(buttonEl),
+      otherAttributes: utils.getOtherAttributes(buttonEl),
+      cssSelector: utils.generateCssSelector(buttonEl),
+      xpath: utils.generateFieldXPath(buttonEl, name),
+      htmlPreview: utils.buildHtmlPreview(buttonEl, 320),
     };
   };
 
@@ -503,7 +607,7 @@
         cellEl,
         (odooWidget || cellEl.closest(".o_list_view, .o_list_renderer, .o_list_table")) && odooFieldName
       ),
-      htmlPreview: utils.truncate(cellEl.outerHTML || "", 320),
+      htmlPreview: utils.buildHtmlPreview(cellEl, 320),
     };
   };
 
@@ -607,6 +711,20 @@
           if (!technicalName && !label) return;
           seen.add(th);
           results.push({ kind: "list", technicalName, label, el: th });
+        });
+      }
+
+      // Odoo buttons are indexed in every mode, including the default one:
+      // the Field Finder selects a result *without* clicking the target, which
+      // is the only non-destructive way to inspect a Save/Delete button.
+      if (settings.formView) {
+        scope.querySelectorAll(ODOO_BUTTON_SELECTOR).forEach((btn) => {
+          if (seen.has(btn) || !utils.isVisible(btn)) return;
+          const name = btn.getAttribute("name") || btn.getAttribute("data-name") || "";
+          const label = (btn.textContent || "").replace(/\s+/g, " ").trim() || btn.getAttribute("title") || "";
+          if (!name && !label) return;
+          seen.add(btn);
+          results.push({ kind: "button", technicalName: name, label: label || name, el: btn });
         });
       }
     } catch (err) {

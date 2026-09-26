@@ -61,7 +61,7 @@
 <div class="wrap">
   <p class="eyebrow"><a href="index.html">&larr; Odoo Field Inspector</a></p>
   <h1>Privacy Policy</h1>
-  <p class="effective">Effective date: 2026-09-18</p>
+  <p class="effective">Effective date: 2026-09-25</p>
 
   <p>This policy covers the "Odoo Field Inspector" Chrome extension ("the extension", "Field Inspector"). It's written to be read on its own — you don't need to read the source code to know what this extension does with your data, though the code is open for inspection in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>.</p>
 
@@ -72,13 +72,18 @@
     <ul>
       <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and the extension has no analytics, telemetry, or crash-reporting of any kind.</li>
       <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name only</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
+      <li>The same mode also reads <strong>one fixed configuration key</strong> (<code>web.base.build.description</code>, falling back to <code>web.base.build.version</code>) from that same server, <strong>at most once per tab</strong>, to learn your Odoo version. The key name is hard-coded in the extension and carries no information about you; the value (e.g. <code>17.0</code>) is only used to choose a link style and is shown in the panel. It is never stored and never sent anywhere else.</li>
+      <li>Inspecting an <strong>Odoo button</strong> (in click-through mode, or by selecting it in the Field Finder) sends that button's model and its method or action name to the same server, to look the button's own declaration up in the view. Buttons are never intercepted on a normal click, so nothing is sent unless you deliberately inspect one. The button's label, the record it targets, and all record data stay in the page.</li>
+      <li>That same mode also reads <strong>view metadata</strong> for the field's model — the active view's record id, the <code>inherit_id</code> chain above it, and one batched <code>ir.model.data</code> lookup that turns those ids into XML IDs — so the panel can show which view file you are looking at and what it extends. These are view <em>identities and names only</em>: the extension never downloads a view's source XML (<code>arch_db</code>), and it reads no record data through them.</li>
       <li>In <strong>Domain Builder</strong>, clicking <strong>Load Fields</strong> with Odoo Developer Mode on sends the chosen model name to the same Odoo server to read field definitions. Domain conditions and values stay in tab memory and are copied to your clipboard only when you choose Copy; they are not sent to Odoo.</li>
-      <li>Your only stored data is your own preference settings, kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
+      <li>Your only stored data is your own preference settings, plus — only if you use the per-site auto-enable option — the origin of each site you chose to remember. Both are kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
     </ul>
   </div>
 
   <h2>What the extension does</h2>
   <p>Field Inspector lets you click a form field or a table/list column on any web page to see a read-only developer panel with its HTML details: element type, attributes, a CSS selector, an XPath, and — on pages served by an Odoo instance — the field's real definition from that Odoo server's own database. It's a developer/inspection tool; it never submits forms or changes record values. Chatter Manager can temporarily hide chatter and show a read-only local message reader; disabling inspection restores the layout.</p>
+  <p>Values of <strong>password inputs, hidden token/CSRF fields, and other secret-named fields</strong> are replaced with a redaction marker before they can be shown or copied — in the panel, in Copy All, in JSON output, and in the Recent Fields history — unless you turn on <em>Show sensitive values</em>.</p>
+  <p>By default, clicks on detected fields are stopped before they reach the page, so inspecting a form cannot change it. If you turn off <em>Intercept clicks</em> (click-through mode), your clicks reach the page normally and can change form data; the extension itself still never writes to a field and never submits anything.</p>
 
   <h2>Data we collect</h2>
   <p><strong>None.</strong> We (the developer) do not operate a backend, collect analytics, or receive any data from installs of this extension. There is no telemetry, no crash reporting, no usage tracking, and no advertising in this extension.</p>
@@ -91,7 +96,7 @@
         <td>The clicked field's/column's HTML (tag, attributes, classes, id, current value, etc.)</td>
         <td>Whenever you click a detected field while the inspector is enabled</td>
         <td><strong>Nowhere</strong> — rendered entirely inside the extension's own on-page panel, in your browser</td>
-        <td>Show you the field's structure</td>
+        <td>Show you the field's structure. Password/secret values are redacted unless <em>Show sensitive values</em> is on</td>
       </tr>
       <tr>
         <td>A field's technical model + field name (e.g. <code>res.partner.email</code>)</td>
@@ -99,14 +104,44 @@
         <td>The <strong>same Odoo server</strong> the current page is already loaded from, over that page's existing logged-in session</td>
         <td>Fetch the field's real <code>ir.model.fields</code> definition and how it's declared in the current view</td>
       </tr>
+      <tr>
+        <td>An inspected button's model + its method/action name (e.g. <code>res.partner</code> + <code>action_send</code>)</td>
+        <td>Only when Odoo Developer Mode is on <em>and</em> the button is inspected (click-through mode, or selected in the Field Finder)</td>
+        <td>The <strong>same Odoo server</strong>, using your existing session</td>
+        <td>Look up that button's declaration in the view arch — its <code>type</code>, <code>special</code>, <code>confirm</code> and <code>groups</code>, which the rendered page does not keep. No record values are involved, and no <code>ir.model.fields</code> lookup is made for a button</td>
+      </tr>
+      <tr>
+        <td>A fixed configuration key name (<code>web.base.build.description</code>)</td>
+        <td>Only when Odoo Developer Mode is on <em>and</em> the clicked field is recognized as an Odoo field — at most once per tab</td>
+        <td>The <strong>same Odoo server</strong>, using your existing session</td>
+        <td>Read your server's Odoo version, so the panel can deep-link to a field record in the URL style that version actually supports. The <em>value</em> returned (e.g. <code>17.0</code>) is used to pick a link shape and is shown in the panel; it is never stored or sent anywhere else</td>
+      </tr>
+      <tr>
+        <td>A model's view record id and its <code>inherit_id</code> ancestors (ids and internal names only)</td>
+        <td>Only when Odoo Developer Mode is on <em>and</em> the clicked field is recognized as an Odoo field</td>
+        <td>The <strong>same Odoo server</strong>, using your existing session</td>
+        <td>Show which XML ID the page is rendered from and what it inherits from. The extension reads view <em>metadata</em> only — it never downloads a view's full source XML (<code>arch_db</code>)</td>
+      </tr>
+      <tr>
+        <td>The ids of those view records, looked up in <code>ir.model.data</code></td>
+        <td>Same as above, in one batched request</td>
+        <td>The <strong>same Odoo server</strong>, using your existing session</td>
+        <td>Resolve view record ids to their external IDs (e.g. <code>base.view_partner_form</code>). The returned values are XML ID strings — which custom modules extend a view — shown in the panel; never stored or sent anywhere else</td>
+      </tr>
       <tr><td>Loaded chatter messages (author, displayed date, message body)</td><td>When you open Chatter Manager</td><td>Nowhere — shown and searched locally; clipboard only when you choose Copy Message</td><td>Read, search, and filter already-loaded messages</td></tr>
       <tr><td>Domain Builder model name</td><td>When you click Load Fields with Odoo Developer Mode on</td><td>The same Odoo server, using your existing session</td><td>Read field definitions using <code>fields_get</code></td></tr>
       <tr><td>Domain Builder conditions and values</td><td>When you use the builder</td><td>Nowhere — tab memory; clipboard only when you choose Copy</td><td>Generate a domain locally without applying it to records</td></tr>
       <tr>
-        <td>Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode on-off)</td>
-        <td>Whenever you change a setting in the popup or Options menu</td>
+        <td>Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode / Show Sensitive Values / Intercept Clicks / Theme / Accent / Density / Debug on-off)</td>
+        <td>Whenever you change a setting in the popup, the Options menu, or the extension's Settings page</td>
         <td><strong>Nowhere</strong> — saved only to <code>chrome.storage.local</code>, local to your browser profile</td>
         <td>Remember your preferences between sessions</td>
+      </tr>
+      <tr>
+        <td>A site you choose to auto-enable on (e.g. <code>https://erp.example.com</code>) — the origin string only</td>
+        <td>When you tick <strong>Auto-enable on this site</strong>, or add the origin on the Settings page</td>
+        <td><strong>Nowhere</strong> — saved only to <code>chrome.storage.local</code>; the matching host permission is visible to you in <code>chrome://extensions</code></td>
+        <td>Start the inspector automatically when you load a page on that site, instead of after each navigation</td>
       </tr>
     </tbody>
   </table>
@@ -119,19 +154,38 @@
       <tr><td><code>activeTab</code></td><td>Lets the extension act on the current tab only after you explicitly click the toolbar icon and turn the inspector on — not automatically on every site.</td></tr>
       <tr><td><code>scripting</code></td><td>Lets the extension inject its inspector code into the tab you've enabled it on, on demand.</td></tr>
       <tr><td><code>storage</code></td><td>Lets the extension save your preference settings locally via <code>chrome.storage.local</code>, so they persist between browser sessions.</td></tr>
+      <tr><td>Optional host access to a site <strong>you choose</strong></td><td>Only if you tick <strong>Auto-enable on this site</strong>. Chrome then asks you to allow this extension on that one origin, and the extension uses it for one thing: re-injecting the inspector when you load a page there. It is not requested for any other site, and not requested at all if you never use the option.</td></tr>
     </tbody>
   </table>
-  <p>The extension requests <strong>no host permissions</strong> — Chrome does not show the broad "read and change all your data on all websites" warning for this extension, because it cannot run on any site until you explicitly enable it there.</p>
+  <p>The extension requests <strong>no host permissions up front</strong> — Chrome does not show the broad "read and change all your data on all websites" warning for this extension, and by default it cannot run on any site until you explicitly enable it there.</p>
+  <p>If you do use <strong>Auto-enable on this site</strong>, a few specifics worth knowing:</p>
+  <ul>
+    <li>Access is per <strong>exact origin</strong>. Remembering <code>https://erp.example.com</code> does not give access to <code>https://intranet.example.com</code>, to <code>http://erp.example.com</code>, or to any other site. Nothing is ever added silently.</li>
+    <li>The remembered sites are listed in the extension's popup and on its full Settings page, each with a <strong>Remove</strong> button. Removing one (or unticking the box) revokes the permission in Chrome as well as clearing the stored entry, so the grant disappears from <code>chrome://extensions</code> too.</li>
+    <li>If you revoke access yourself from <code>chrome://extensions</code>, the extension stops injecting there on the next page load and drops the now-meaningless remembered entry the next time you open the popup or the Settings page.</li>
+    <li>The stored entry is the origin text only. No page content, URL path, field name, or browsing history is saved. The extension does not record which pages you visit on that site.</li>
+    <li>Adding a site by hand is equivalent to ticking the box on that site: the Settings page normalizes what you paste to a single origin (<code>https://erp.example.com/web/webclient#home</code> is remembered as <code>https://erp.example.com</code>) and then asks Chrome for that <strong>one</strong> origin only. A wildcard such as <code>*</code>, or an address pasted with a password in it, is refused before Chrome is asked for anything.</li>
+    <li>Turning the inspector off on a remembered site keeps it off for that tab until you close the tab or navigate it elsewhere.</li>
+    <li>Sites served over <code>file://</code> cannot be remembered (browsers do not allow this kind of access to local files), so the option is unavailable there.</li>
+  </ul>
 
   <h2>Data retention</h2>
   <ul>
-    <li>Your preference settings persist in <code>chrome.storage.local</code> until you change them again or remove the extension (removing the extension clears this storage, per Chrome's standard behavior).</li>
+    <li>Your preference settings persist in <code>chrome.storage.local</code> until you change them again or remove the extension (removing the extension clears this storage, per Chrome's standard behavior). The same applies to the list of origins you chose for auto-enable.</li>
     <li>Odoo field-definition lookups are cached only in memory, only for the life of the current browser tab — closing or navigating the tab away clears that cache. Nothing is written to disk beyond your preference settings above.</li>
   </ul>
 
   <p>Chatter Manager message data stays in tab memory and is cleared when inspection is disabled or the detected record changes. It does not read composer drafts.</p>
 
   <p>Domain Builder drafts and loaded field definitions stay in tab memory. Reloading, navigating away, or closing the tab clears them.</p>
+
+  <h2>Appearance and debug settings</h2>
+  <ul>
+    <li>Theme (System / Light / Dark), accent color, density and the debug switch are ordinary local preferences, stored in <code>chrome.storage.local</code> like every other setting. They are never transmitted anywhere, and they contain no page data.</li>
+    <li>The popup shows the quick settings; the extension's <strong>Settings</strong> page (opened from <strong>All settings</strong> in the popup, in its own browser tab) shows the same preferences in full, together with the live preview of the panel and the list of sites you chose to auto-enable on. It is a page of this extension, running entirely in your browser: it reads the same local settings and writes the same local settings, and it has no access to any page you are viewing.</li>
+    <li>A <code>?debug=1</code> or <code>?debug=0</code> parameter in a page's URL is read <strong>only</strong> in that page's own tab, to turn console diagnostics on or off for that page load. It is not stored, it is not sent anywhere, it cannot change a saved preference on any other page, and it cannot enable the inspector by itself — the inspector still has to be turned on, from the popup or by per-site auto-enable.</li>
+    <li>The accent color is also applied to the outlines the extension draws around detected fields. That is a style the extension writes onto the page while inspection is enabled, and it is removed again when you disable the inspector — no page content is read to choose it.</li>
+  </ul>
 
   <h2>Third parties</h2>
   <p>We do not share, sell, or transfer any data to third parties, because we do not collect any data in the first place. The outbound network requests are the Odoo metadata lookups described above, including Domain Builder field definitions, and these go directly from your browser to the Odoo server the current page is already on — never to us, and never to any third-party analytics, advertising, or data-broker service.</p>

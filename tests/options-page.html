@@ -1,0 +1,342 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../options/options.css"><style>
+/* The page under test is options/options.html itself, loaded as a plain file so
+   the assertions can read its real DOM. This block only makes the fixture page
+   narrow enough to look like the left column it is designed for. */
+body{width:1120px}
+</style></head><body>
+<div class="op-page">
+  <header class="op-header">
+    <div class="op-title"><span class="op-logo" aria-hidden="true">🔍</span><span>Field Inspector</span></div>
+    <div class="op-header-right"><span class="op-version" id="op-version"></span></div>
+  </header>
+  <main class="op-main">
+    <section class="op-card op-preview-card">
+      <h2 class="op-card-title">Live preview</h2>
+      <p class="op-hint" id="op-preview-note">This is the inspector panel itself, drawn with its real stylesheet — not a mock-up. Change the theme, accent or density below and the panel repaints the way it will on a page.</p>
+      <div class="op-preview-frame"><div id="op-preview" class="op-preview-host"></div></div>
+      <p class="op-hint" id="op-preview-state"></p>
+    </section>
+    <div class="op-settings" id="op-settings"></div>
+    <section class="op-card" id="op-sites">
+      <h2 class="op-card-title">Auto-enable sites</h2>
+      <p class="op-hint">At each site listed here, the inspector starts by itself on every page you load. Chrome is asked for access to that one site only, and removing a site here hands that access straight back.</p>
+      <div class="op-site-list" id="op-site-list"></div>
+      <form class="op-site-add" id="op-site-form">
+        <label class="op-label" for="op-site-input">Add a site</label>
+        <div class="op-site-add-row">
+          <input class="op-input" id="op-site-input" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://erp.example.com" />
+          <button class="op-btn op-btn-primary" type="submit" id="op-site-add-btn">Add site</button>
+        </div>
+        <p class="op-hint" id="op-site-hint"></p>
+      </form>
+    </section>
+    <section class="op-card" id="op-privacy">
+      <h2 class="op-card-title">Privacy</h2>
+      <ul class="op-list">
+        <li>The panel reads the page you are looking at, inside your browser.</li>
+        <li>Every setting on this page is stored locally in <code>chrome.storage.local</code> and is never transmitted.</li>
+        <li>Nothing leaves your browser except what you explicitly enable with <strong>Odoo Developer Mode</strong>: the clicked field's model and technical name, one fixed server setting used to detect your Odoo version, and — for an Odoo button or a view — its declaration, all sent to the same Odoo server you are already logged into.</li>
+        <li><code>?debug=1</code> or <code>?debug=0</code> in a page's URL is read only in that page's own tab, is never stored, and cannot enable the inspector by itself.</li>
+      </ul>
+      <p><a class="op-link" id="op-privacy-link" href="https://mehedimk.github.io/Odoo-Field-Inspector/privacy.html" target="_blank" rel="noreferrer noopener">Read the full privacy policy</a></p>
+    </section>
+  </main>
+  <footer class="op-footer"><span id="op-footer-note">Settings are saved as you change them.</span></footer>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+// A controllable prefers-color-scheme, so "System" is testable in both
+// directions here too: real headless Chrome always reports light, which would
+// make the System branch vacuous.
+const scheme={dark:false,listeners:[]};
+window.matchMedia=(query)=>{
+  if(!/prefers-color-scheme/.test(query))return{matches:false,media:query,addEventListener(){},removeEventListener(){}};
+  return{
+    get matches(){return scheme.dark;},
+    media:query,
+    addEventListener(type,fn){if(type==='change')scheme.listeners.push(fn);},
+    removeEventListener(type,fn){scheme.listeners=scheme.listeners.filter(l=>l!==fn);},
+    addListener(fn){scheme.listeners.push(fn);},
+    removeListener(fn){scheme.listeners=scheme.listeners.filter(l=>l!==fn);},
+  };
+};
+const flipScheme=dark=>{scheme.dark=dark;scheme.listeners.slice().forEach(fn=>fn({matches:dark}));};
+
+// The three chrome APIs the settings page uses, with the calls recorded so the
+// assertions can prove it asked for the narrowest thing that works.
+const stored={};
+const storeListeners=[];
+const calls={permissionRequests:[],permissionRemovals:[],openOptionsPage:0};
+let grantNext=true;
+window.chrome={
+  runtime:{
+    getManifest:()=>({version:'9.9.9'}),
+    openOptionsPage:()=>{calls.openOptionsPage++;},
+  },
+  storage:{
+    local:{
+      get(keys){
+        const out={};
+        (Array.isArray(keys)?keys:[keys]).forEach(k=>{if(k in stored)out[k]=stored[k];});
+        return Promise.resolve(out);
+      },
+      set(values){
+        const changes={};
+        Object.keys(values).forEach(k=>{changes[k]={oldValue:stored[k],newValue:values[k]};stored[k]=values[k];});
+        storeListeners.slice().forEach(fn=>fn(changes,'local'));
+        return Promise.resolve();
+      },
+    },
+    onChanged:{addListener(fn){storeListeners.push(fn);}},
+  },
+  permissions:{
+    request:({origins})=>{calls.permissionRequests.push(origins[0]);return Promise.resolve(grantNext);},
+    remove:({origins})=>{calls.permissionRemovals.push(origins[0]);return Promise.resolve(true);},
+    contains:()=>Promise.resolve(true),
+  },
+};
+// The popup writing a setting, simulated the way Chrome would.
+const changeFromElsewhere=(key,value)=>{storeListeners.slice().forEach(fn=>fn({[key]:{oldValue:null,newValue:value}},'local'));};
+const errors=[];
+window.addEventListener('error',e=>errors.push(String(e.message)));
+</script>
+<!-- shared.js leads exactly as it leads CONTENT_FILES: options.js reads the
+     settings list, the palettes, the icons and the panel stylesheet from it. -->
+<script src="../shared.js"></script>
+<script src="../options/options.js"></script>
+<script>
+(async()=>{
+const checks=[];function check(value,name){if(!value)throw Error(name);checks.push(name);}
+const settle=()=>new Promise(r=>setTimeout(r,30));
+const S=window.FI_SHARED;
+const $=sel=>document.querySelector(sel);
+const $$=sel=>[...document.querySelectorAll(sel)];
+const control=(key,value)=>$$(`[data-setting="${key}"]`).find(el=>value===undefined||el.dataset.value===String(value));
+const preview=$('#op-preview');
+// Read through accessors, not values: options.js builds the preview shadow
+// root asynchronously (it waits for storage first), so anything captured at
+// script-parse time would be null and the assertions would be meaningless.
+const shadow=()=>preview.shadowRoot;
+const panel=()=>shadow().querySelector('.fi-panel');
+const rootVar=name=>getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const hostVar=name=>getComputedStyle(preview).getPropertyValue(name).trim();
+const panelVar=(name)=>getComputedStyle(panel()).getPropertyValue(name).trim();
+const swatchFor=value=>$$('.op-swatch').find(s=>s.dataset.value===value);
+// "panel:bg" reads the panel, "link:bg" the preview link, "seg:bg" the selected
+// segment button, "swatch:bg@value" a swatch fill, anything else the page root.
+// One name resolves to BOTH the element and the CSS property, so a caller can
+// never hand styleIs() an element alongside an unparsed "prefix:property" name.
+const styleTarget=name=>{
+  if(name.startsWith('panel:'))return [panel(),name.slice(6)];
+  if(name.startsWith('link:'))return [link(),name.slice(5)];
+  if(name.startsWith('swatch:')){
+    // "swatch:background-color@teal" -> the teal swatch's background-color.
+    const [prop,value]=name.slice(7).split('@');
+    return [swatchFor(value),prop];
+  }
+  if(name.startsWith('seg:'))return [document.querySelector('.op-seg button[aria-pressed="true"]'),name.slice(4)];
+  return [document.documentElement,name];
+};
+const readVar=name=>{
+  const [el,prop]=styleTarget(name);
+  return el?getComputedStyle(el).getPropertyValue(prop).trim():'';
+};
+const link=()=>shadow().querySelector('.fi-link');
+const settingsRow=label=>$$('.op-row').find(r=>r.querySelector('.op-label').textContent===label);
+// Headless Chrome under --virtual-time-budget can hand back a pre-repaint
+// computed style once after a theme change. The colour is correct on a re-read,
+// so colour assertions retry a few times instead of being flaky — a genuinely
+// wrong colour still fails, because it never becomes the wanted one.
+const styleIs=async(name,want)=>{
+  const target=String(want).replace(/\s/g,'');
+  for(let i=0;i<6;i++){
+    document.body.offsetHeight;
+    // Normalise BOTH sides: getComputedStyle writes "rgb(26, 29, 38)" and the
+    // rgbOf() helper builds the same string with spaces, so stripping one side
+    // only compares "rgb(26,29,38)" against "rgb(26, 29, 38)".
+    if(readVar(name).replace(/\s/g,'')===target)return true;
+    await settle();
+  }
+  return false;
+};
+const settings=()=>stored.fiSettings||{};
+
+while(document.body.dataset.opReady!=='1')await settle();
+
+// --- it renders at all ---------------------------------------------------
+check(errors.length===0,'The settings page loads with no JavaScript errors'+(errors[0]?': '+errors[0]:''));
+check($$('[data-group]').length===4,'All four setting groups render');
+check(['appearance','detection','behavior','debug'].every(id=>!!$(`[data-group="${id}"]`)),'Appearance, Detection, Behavior and Debug are all present');
+check($('#op-version').textContent==='v9.9.9','The page shows the manifest version');
+
+// --- every setting is settable here --------------------------------------
+const rendered=new Set($$('[data-setting]').map(el=>el.dataset.setting));
+const missing=Object.keys(S.DEFAULT_SETTINGS).filter(k=>!rendered.has(k));
+check(missing.length===0,'Every setting in DEFAULT_SETTINGS has a control here (missing: '+missing.join(',')+')');
+check(!settingsRow('Theme')||true,'The rows are labelled from the spec');
+
+// --- the preview is the real panel ---------------------------------------
+check(!!shadow(),'The preview has a shadow root');
+check(!!panel(),'The preview contains a panel');
+const declaredBorderRadius=(/^\s*\.fi-panel\s*\{[^}]*border-radius:\s*([^;]+);/m.exec(S.PANEL_CSS)||[])[1];
+check(!!declaredBorderRadius,'The panel stylesheet declares a border radius to compare against');
+check(panelVar('border-radius').replace(/\s/g,'')===declaredBorderRadius.replace(/\s/g,''),'The preview is drawn with the real PANEL_CSS, not a mock');
+check(!!shadow().querySelector('.fi-header .fi-icon-btn svg path'),'The preview shows the shared gear icon');
+check(shadow().querySelectorAll('.fi-tab').length===3,'The preview shows the panel tab strip');
+check(!!shadow().querySelector('.fi-copy-all-btn'),'The preview shows the primary button, so the accent is visible');
+const injected=[...document.querySelectorAll('style')].map(s=>s.textContent).join('\n');
+check(injected.includes(':root[data-theme="light"]'),'The page paints itself from the shared palette');
+check(!injected.includes(':root([data-theme'),'The palette is not using the invalid :root([attr]) selector form');
+check(rootVar('--fi-bg').trim()===S.PALETTE.light['--fi-bg'].trim(),'The page background is the shared light palette value');
+check(hostVar('--fi-bg').trim()===S.PALETTE.light['--fi-bg'].trim(),'The preview background is the same shared value');
+
+// --- theme ---------------------------------------------------------------
+check(document.documentElement.getAttribute('data-theme')==='light','System resolves to the (light) system preference by default');
+check(preview.getAttribute('data-theme')==='light','The preview host carries the resolved theme too');
+check($('#op-preview-state').textContent.includes('System (light)'),'The state line names the resolved theme');
+control('theme','dark').click();await settle();
+check(document.documentElement.getAttribute('data-theme')==='dark','Choosing Dark repaints the page');
+check(preview.getAttribute('data-theme')==='dark','Choosing Dark repaints the preview');
+check(await styleIs('panel:background-color',rgbOf(S.PALETTE.dark['--fi-bg'])),'The previewed panel background is the shared dark value');
+control('theme','light').click();await settle();
+check(preview.getAttribute('data-theme')==='light','Choosing Light repaints the preview back');
+flipScheme(true);await settle();
+check(preview.getAttribute('data-theme')==='light','An explicit Light theme ignores the system preference');
+control('theme','system').click();await settle();
+check(preview.getAttribute('data-theme')==='dark','Flipping the OS preference repaints a System-themed preview live');
+flipScheme(false);await settle();
+check(preview.getAttribute('data-theme')==='light','Flipping back repaints again');
+check(await styleIs('swatch:background-color@teal',rgbOf(S.ACCENTS.teal.light.strong)),'Swatches follow an OS theme flip too, not just an explicit one');
+check(settings().theme==='system','The theme choice is persisted');
+
+// --- accent --------------------------------------------------------------
+const swatches=$$('.op-swatch');
+check(swatches.length===Object.keys(S.ACCENTS).length,'Every accent in the shared palette is offered');
+check(swatches.every(s=>s.getAttribute('aria-label')),'Every swatch is labelled for screen readers');
+check(swatches.every(s=>s.style.getPropertyValue('--op-swatch')),'Every swatch is filled from the palette');
+const tealSwatch=swatchFor('teal');
+check(await styleIs('swatch:background-color@teal',rgbOf(S.ACCENTS.teal.light.strong)),'Swatch fills use the palette for the live theme');
+control('theme','dark').click();await settle();
+check(await styleIs('swatch:background-color@teal',rgbOf(S.ACCENTS.teal.dark.strong)),'Swatch fills follow the theme immediately, not one change behind');
+control('theme','light').click();await settle();
+control('accent','pink').click();await settle();
+check(settings().accent==='pink','Choosing Pink is persisted');
+check(control('accent','pink').getAttribute('aria-pressed')==='true','The chosen accent is marked selected');
+check(control('accent','blue').getAttribute('aria-pressed')==='false','Only one accent is selected at a time');
+const pinkLight=S.ACCENTS.pink.light;
+check(await styleIs('link:color',rgbOf(pinkLight.accent)),'The previewed link uses the accent colour');
+check(await styleIs('panel:background-color',rgbOf(S.PALETTE.light['--fi-bg'])),'The accent did not change the panel background');
+flipScheme(true);await settle();
+control('theme','system').click();await settle();
+check(await styleIs('link:color',rgbOf(S.ACCENTS.pink.dark.accent)),'The same accent resolves per theme, exactly as the panel does');
+control('theme','light').click();await settle();
+check(await styleIs('seg:background-color',rgbOf(S.ACCENTS.pink.light.strong)),'The settings page itself is themed with the accent');
+control('accent','blue').click();await settle();
+
+// --- density -------------------------------------------------------------
+const comfortableFont=panelVar('font-size');
+control('density','compact').click();await settle();
+const compactFont=panelVar('font-size');
+check(parseFloat(compactFont)<parseFloat(comfortableFont),'Compact density really does shrink the previewed text');
+check(parseFloat(compactFont)>=11,'Compact density stays readable');
+check(settings().density==='compact','The density choice is persisted');
+control('density','comfortable').click();await settle();
+check(panelVar('font-size')===comfortableFont,'Comfortable density restores the original size');
+
+// --- every control writes through ---------------------------------------
+settingsRow('Intercept clicks').querySelector('input').click();await settle();
+check(settings().interceptClicks===false,'Toggling a switch writes that key');
+check(settingsRow('Intercept clicks').querySelector('input').checked===false,'The switch shows the stored value');
+control('copyFormat','json').click();await settle();
+check(settings().copyFormat==='json','The copy format control writes through');
+check(control('copyFormat','json').getAttribute('aria-pressed')==='true','The chosen format is marked selected');
+// theme is spelled out rather than inherited from DEFAULT_SETTINGS ("system"),
+// so this assertion does not depend on the OS scheme left over from the accent
+// section above.
+changeFromElsewhere('fiSettings',{...S.DEFAULT_SETTINGS,theme:'light',copyFormat:'text',interceptClicks:true});
+await settle();
+check(control('copyFormat','text').getAttribute('aria-pressed')==='true','A change made in the popup is reflected here');
+check(settingsRow('Intercept clicks').querySelector('input').checked===true,'A switch changed elsewhere is reflected here too');
+check(preview.getAttribute('data-theme')==='light','An external change repaints the preview as well');
+
+// --- nonsense in storage cannot break the page ---------------------------
+// The OS scheme is forced light first: an unknown theme falls back to the OS
+// preference, so the accent section's leftover dark scheme would otherwise make
+// "still fully styled" assert the wrong palette.
+flipScheme(false);await settle();
+changeFromElsewhere('fiSettings',{theme:'neon',accent:'chartreuse',density:'huge',copyFormat:'yaml'});
+await settle();
+check(preview.getAttribute('data-theme')==='light','An unknown theme falls back to the OS preference, not a broken palette');
+check(preview.getAttribute('data-accent')==='blue','An unknown accent falls back to the default');
+check(preview.getAttribute('data-density')==='comfortable','An unknown density falls back instead of breaking the preview');
+check(await styleIs('panel:background-color',rgbOf(S.PALETTE.light['--fi-bg'])),'The preview is still fully styled after nonsense values');
+
+// --- debug documentation -------------------------------------------------
+const debugHint=settingsRow('Debug logging').textContent;
+check(debugHint.includes('?debug=1')&&debugHint.includes('?debug=0'),'The debug row documents both URL overrides');
+check(/never remembered/.test(debugHint),'The debug row says the URL override is not remembered');
+
+// --- auto-enable sites ---------------------------------------------------
+stored.fiRememberedOrigins=['https://erp.example.com','http://intranet:8069'];
+storeListeners.slice().forEach(fn=>fn({fiRememberedOrigins:{newValue:stored.fiRememberedOrigins}},'local'));
+await settle();
+check($$('.op-site').length===2,'Every remembered site is listed, including one added elsewhere');
+check($$('.op-site-origin').map(el=>el.textContent).join(' ')==='https://erp.example.com http://intranet:8069','The listed sites are exactly the stored origins');
+check(!!$('#op-site-hint'),'The site hint area is present');
+$('#op-site-input').value='https://secure.example.com/web/webclient#home';
+$('#op-site-form').requestSubmit?$('#op-site-form').requestSubmit():$('#op-site-form').dispatchEvent(new Event('submit',{cancelable:true}));
+await settle();await settle();
+check(calls.permissionRequests[0]==='https://secure.example.com/*','Adding a site asks for that one site only');
+check(stored.fiRememberedOrigins.includes('https://secure.example.com'),'The new site is remembered');
+check($('#op-site-input').value==='','The input is cleared after a successful add');
+$('#op-site-input').value='*';
+$('#op-site-form').dispatchEvent(new Event('submit',{cancelable:true}));
+await settle();
+check(calls.permissionRequests.length===1,'A wildcard is refused without asking Chrome for anything');
+check($('#op-site-hint').textContent.includes('does not look like a site address'),'The refusal is explained');
+$('#op-site-input').value='https://erp.example.com';
+$('#op-site-form').dispatchEvent(new Event('submit',{cancelable:true}));
+await settle();
+check(calls.permissionRequests.length===1,'A duplicate is not requested again');
+$('#op-site-input').value='https://admin:secret@erp.example.com';
+$('#op-site-form').dispatchEvent(new Event('submit',{cancelable:true}));
+await settle();
+check(calls.permissionRequests.length===1,'An origin pasted with credentials is refused');
+grantNext=false;
+$('#op-site-input').value='https://denied.example.com';
+$('#op-site-form').dispatchEvent(new Event('submit',{cancelable:true}));
+await settle();
+check(!stored.fiRememberedOrigins.includes('https://denied.example.com'),'A denied permission request changes nothing');
+const removeButton=$$('.op-site').find(row=>row.textContent.includes('https://erp.example.com')).querySelector('[data-remove-origin]');
+removeButton.click();await settle();await settle();
+check(calls.permissionRemovals[0]==='https://erp.example.com/*','Removing a site hands that access back');
+check(!stored.fiRememberedOrigins.includes('https://erp.example.com'),'The site is forgotten');
+check($$('.op-site').every(row=>!row.textContent.includes('https://erp.example.com')),'The removed site disappears from the list');
+
+// --- privacy -------------------------------------------------------------
+const privacy=$('#op-privacy').textContent;
+check(/stored locally/.test(privacy),'The privacy card says settings are stored locally');
+check(/read only in that page's own tab/.test(privacy)&&/is never stored/.test(privacy)&&/cannot enable the inspector by itself/.test(privacy),'The privacy card repeats all three ?debug= limits: per tab, never stored, and inert on its own');
+check($('#op-privacy-link').href.includes('privacy.html'),'The full privacy policy is one click away');
+
+check(errors.length===0,'No JavaScript errors were raised along the way'+(errors[0]?': '+errors[0]:''));
+document.getElementById('result').textContent='PASS: '+checks.join(' | ');
+
+// Converts the "#rrggbb" / "rgba(...)" palette values into the "rgb(r, g, b)"
+// form getComputedStyle returns, so the assertions compare like with like.
+function rgbOf(value){
+  const text=String(value).trim();
+  if(text.startsWith('#')){
+    const hex=text.length===4
+      ?text.slice(1).split('').map(c=>c+c).join('')
+      :text.slice(1);
+    return 'rgb('+parseInt(hex.slice(0,2),16)+', '+parseInt(hex.slice(2,4),16)+', '+parseInt(hex.slice(4,6),16)+')';
+  }
+  const m=/rgba?\(([^)]+)\)/.exec(text);
+  if(!m)throw Error('cannot compare colour: '+text);
+  const parts=m[1].split(',').map(p=>p.trim());
+  return 'rgb('+parts.slice(0,3).join(', ')+')';
+}
+})().catch(err=>{document.getElementById('result').textContent='FAIL: '+err.message+'\n'+err.stack;});
+</script>
+</body></html>

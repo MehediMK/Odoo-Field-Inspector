@@ -5,6 +5,10 @@
 let receiver; const saved = {};
 window.chrome = {runtime: {onMessage: {addListener(fn) {receiver=fn;}}, sendMessage() {}}, storage: {local: {set(data) {Object.assign(saved,data);return Promise.resolve();}}}};
 </script>
+<!-- shared.js leads here exactly as it leads CONTENT_FILES: ui.js reads PANEL_CSS and
+     content.js reads DEFAULT_SETTINGS from it, so a fixture that skipped it would test a
+     different load order than the extension really uses. -->
+<script src="../shared.js"></script>
 <script src="../content/utils.js"></script><script src="../content/odoo.js"></script>
 <script src="../content/detector.js"></script><script src="../content/ui.js"></script>
 <script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script>
@@ -26,7 +30,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 function change(el,value) {el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 message('FI_ENABLE',{odooMode:true});
 ui.finderBtnEl.click();
-check(ui.optionsPanelEl.querySelectorAll('[data-option]').length===7,'Domain Builder appears as seventh option');
+check(['search','domain','recent','highlight','odooMode','showSensitiveValues','interceptClicks','copy','disable'].every(option=>ui.optionsPanelEl.querySelector(`[data-option="${option}"]`)),'Options menu exposes every expected action');
 ui.optionsPanelEl.querySelector('[data-option="domain"]').click();
 check(domainBuilder.isOpen() && !ui.isOptionsOpen(),'Domain action opens builder and closes options');
 const panel=ui.shadowRoot.querySelector('.fi-domain-panel');

@@ -287,6 +287,112 @@
     return result;
   };
 
+  // ------------------------------------------------------------------
+  // Sensitive-value redaction
+  //
+  // The panel and the Copy All / JSON output surface live DOM values, so
+  // anything that looks like a credential must be blocked before it ever
+  // reaches a rendered row or the clipboard. Redaction happens while the
+  // info object is BUILT (detector.js), which makes every downstream
+  // consumer — panel, copy text, JSON dump, history — safe by default.
+  // ------------------------------------------------------------------
+
+  /** Placeholder substituted wherever a sensitive value would otherwise appear. */
+  utils.REDACTED_TEXT = "(redacted — sensitive field)";
+
+  /** Names that are secrets by substring, whatever separators surround them. */
+  const SENSITIVE_SUBSTR_RE =
+    /(password|passwd|pwd|secret|token|csrf|apikey|api[-_]key|credential|authorization|one[-_]?time|private[-_]?key|bearer)/i;
+
+  /**
+   * Standalone name tokens that mark a secret. Checked against split
+   * tokens only, so `author`, `auth_type` or `key` (a real, harmless
+   * business field) are NOT redacted — false positives here would hide
+   * data the inspector exists to show.
+   */
+  const SENSITIVE_TOKENS = new Set(["otp"]);
+
+  /** True if a field/attribute NAME looks like it carries a credential or secret. */
+  utils.isSensitiveName = function (name) {
+    if (typeof name !== "string" || !name) return false;
+    if (SENSITIVE_SUBSTR_RE.test(name)) return true;
+    const tokens = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    return tokens.some((t) => SENSITIVE_TOKENS.has(t));
+  };
+
+  /** True if this control's autocomplete token implies a secret value. */
+  function hasSensitiveAutocomplete(el) {
+    const ac = String((el.getAttribute && el.getAttribute("autocomplete")) || "").toLowerCase();
+    return ac.includes("password") || ac.includes("one-time-code");
+  }
+
+  /**
+   * True if reading this control's value would expose a credential.
+   *
+   * - `<input type="password">` is always sensitive.
+   * - Otherwise the name/id/aria-label/placeholder must match
+   *   `isSensitiveName`, or autocomplete must imply a password/OTP.
+   *
+   * Deliberately NOT blanket-covering every hidden input: Odoo rides ids
+   * and context in `<input type="hidden">` that are harmless and useful
+   * to show, while a CSRF token or API key is caught by its name anyway.
+   */
+  utils.isSensitiveField = function (el) {
+    if (!el || !el.tagName || !el.getAttribute) return false;
+    try {
+      if (el.tagName === "INPUT" && String(el.type || "text").toLowerCase() === "password") return true;
+      if (hasSensitiveAutocomplete(el)) return true;
+      return ["name", "id", "aria-label", "placeholder"].some((attr) => utils.isSensitiveName(el.getAttribute(attr)));
+    } catch (err) {
+      return false; // fail closed on the value side: never throw mid-build
+    }
+  };
+
+  /**
+   * HTML preview of `el` (truncated), with secret-carrying attributes
+   * masked out unless `reveal` is set. Only attributes that can hold a
+   * secret VALUE are masked — `name`/`id`/`class`/`type` stay intact
+   * because those are exactly what the inspector exists to show.
+   */
+  utils.buildHtmlPreview = function (el, max = 320, reveal = false) {
+    if (!el || !el.outerHTML) return "";
+    if (reveal) return utils.truncate(el.outerHTML, max);
+
+    const controls = [el, ...(el.querySelectorAll ? Array.from(el.querySelectorAll("input, textarea, select")) : [])];
+    const hasSecrets = controls.some((node) => utils.isSensitiveField(node));
+    if (!hasSecrets) return utils.truncate(el.outerHTML, max);
+
+    try {
+      const clone = el.cloneNode(true);
+      const nodes = [clone, ...(clone.querySelectorAll ? Array.from(clone.querySelectorAll("*")) : [])];
+      for (const node of nodes) {
+        if (node.tagName !== "INPUT" && node.tagName !== "TEXTAREA") continue;
+        if (!utils.isSensitiveField(node)) continue;
+        if (node.hasAttribute("value")) node.setAttribute("value", utils.REDACTED_TEXT);
+        if (node.tagName === "TEXTAREA" && node.firstChild) node.textContent = utils.REDACTED_TEXT;
+      }
+      return utils.truncate(clone.outerHTML, max);
+    } catch (err) {
+      return utils.REDACTED_TEXT;
+    }
+  };
+
+  /**
+   * Drops secret-named entries from a {name: value} attribute map (e.g. a
+   * `data-token` on the element) unless `reveal` is set. Returns the input
+   * object untouched when there is nothing to redact.
+   */
+  utils.redactAttrMap = function (attrs, reveal) {
+    if (!attrs || reveal) return attrs;
+    let out = attrs;
+    for (const key of Object.keys(attrs)) {
+      if (!utils.isSensitiveName(key)) continue;
+      if (out === attrs) out = { ...attrs };
+      out[key] = utils.REDACTED_TEXT;
+    }
+    return out;
+  };
+
   /** True if el has non-zero layout box and isn't hidden via CSS/attribute. */
   utils.isVisible = function (el) {
     try {

@@ -27,6 +27,20 @@
         </label>
       </div>
       <p class="fp-hint">Click a field label or a table column header on the page to inspect it. Click the panel's × or press Esc to close it.</p>
+      <button type="button" class="fp-all-settings" id="fp-all-settings">
+        <span>All settings</span>
+        <span class="fp-all-settings-hint">Theme, accent, debug, sites &amp; privacy — opens in a new tab</span>
+      </button>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">This Site</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-remember-site" />
+        <span>Auto-enable on this site <em>(start the inspector automatically every time you load a page at <b id="fp-remember-origin">this site</b>)</em></span>
+      </label>
+      <p class="fp-hint" id="fp-remember-hint">Checking this asks for access to this site only. Turn it off to remove that access.</p>
+      <div class="fp-site-list" id="fp-remembered-list"></div>
     </section>
 
     <section class="fp-card">
@@ -53,7 +67,7 @@
       <div class="fp-card-title">Odoo Developer Mode</div>
       <label class="fp-checkbox-row">
         <input type="checkbox" id="fp-odoo-mode" />
-        <span>Look up live field definitions from Odoo <em>(sends the model + field name to the Odoo server you're already logged into — see About &amp; Privacy)</em></span>
+        <span>Look up live field and button definitions from Odoo <em>(sends the model + technical name to the Odoo server you're already logged into — see About &amp; Privacy)</em></span>
       </label>
     </section>
 
@@ -69,21 +83,59 @@
       </label>
     </section>
 
+    <section class="fp-card">
+      <div class="fp-card-title">Appearance</div>
+      <div class="fp-segmented" role="group" aria-label="Theme">
+        <button type="button" class="fp-seg" data-theme-choice="system" aria-pressed="true">System</button>
+        <button type="button" class="fp-seg" data-theme-choice="light" aria-pressed="false">Light</button>
+        <button type="button" class="fp-seg" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+      <div class="fp-accent-row" role="group" aria-label="Accent color">
+        <button type="button" class="fp-accent" data-accent-choice="blue" style="--fp-accent-swatch:#1d4ed8" aria-label="Blue" aria-pressed="true"></button>
+        <button type="button" class="fp-accent" data-accent-choice="teal" style="--fp-accent-swatch:#0d5f59" aria-label="Teal" aria-pressed="false"></button>
+        <button type="button" class="fp-accent" data-accent-choice="purple" style="--fp-accent-swatch:#6d28d9" aria-label="Purple" aria-pressed="false"></button>
+        <button type="button" class="fp-accent" data-accent-choice="green" style="--fp-accent-swatch:#166534" aria-label="Green" aria-pressed="false"></button>
+        <button type="button" class="fp-accent" data-accent-choice="orange" style="--fp-accent-swatch:#9a3412" aria-label="Orange" aria-pressed="false"></button>
+        <button type="button" class="fp-accent" data-accent-choice="pink" style="--fp-accent-swatch:#9d174d" aria-label="Pink" aria-pressed="false"></button>
+      </div>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">Click Behavior</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-intercept-clicks" />
+        <span>Intercept clicks on detected fields <em>(keeps the page from changing form data while inspecting — turn off for click-through, so you can still edit the form)</em></span>
+      </label>
+    </section>
+
+    <section class="fp-card">
+      <div class="fp-card-title">Privacy</div>
+      <label class="fp-checkbox-row">
+        <input type="checkbox" id="fp-show-sensitive" />
+        <span>Show sensitive values <em>(password, token &amp; secret-named fields are redacted from the panel and clipboard by default)</em></span>
+      </label>
+    </section>
+
     <details class="fp-card fp-about">
       <summary>About &amp; Privacy</summary>
       <div class="fp-about-body">
-        <p>Field Inspector reads only the HTML of the page you're currently viewing, entirely inside your browser. It never modifies form data — clicking a field only opens a read-only info panel.</p>
-        <p><strong>Odoo Developer Mode</strong> is the one exception to "nothing ever leaves your browser": when it's on and a clicked field is recognized as an Odoo field, the field's model + technical name (never its value) are sent to the same Odoo server you're already logged into, to fetch that field's real definition. Turn it off above to disable this entirely — everything else keeps working.</p>
+        <p>Field Inspector reads only the HTML of the page you're currently viewing, entirely inside your browser. By default it never modifies form data — clicking a field only opens a read-only info panel, because the click is stopped before it reaches the page.</p>
+        <p>If you turn off <em>Intercept clicks</em> above (click-through mode), your clicks reach the page normally and can change form data exactly as they would without the extension. The info panel still opens alongside.</p>
+        <p>Values belonging to password, hidden-token and other secret-named fields are <strong>redacted</strong> — they never appear in the panel, in Copy All, or in JSON output unless you explicitly turn on <em>Show sensitive values</em> above.</p>
+        <p><strong>Odoo Developer Mode</strong> is the one exception to "nothing ever leaves your browser": when it's on and a clicked field is recognized as an Odoo field, the field's model + technical name (never its value) are sent to the same Odoo server you're already logged into, to fetch that field's real definition. In the same mode the extension reads one fixed, hard-coded setting from that server (<code>web.base.build.description</code>, at most once per tab) to learn your Odoo version, which it uses to build a deep link in the URL style your version supports. Inspecting an <em>Odoo button</em> (in click-through mode, or by picking it in the Field Finder) sends just that button's model + method/action name to the same server, to look its own declaration up — never the button's label, the record it targets, or any record data. Normal clicks on buttons are never intercepted. In the same mode the extension also reads <em>view metadata</em> for that model — which view XML ID you're looking at, what it inherits from, and what attributes a field or button declared there — and never downloads a view's source XML. Turn it off above to disable all of this — everything else keeps working.</p>
+        <p>Your <strong>theme, accent color, density and debug switch</strong> are your own preferences: they are stored locally, never transmitted, and contain no page data. Everything you can set in this popup is also available in full on the extension's <strong>Settings page</strong> — open it with the <em>All settings</em> button below <em>Enable Inspector</em>, or from the extensions menu. It opens in its own tab with a live preview of the actual panel, and it only reads and writes these same local settings: it has no access to any page you are viewing. If a page URL carries <code>?debug=1</code> or <code>?debug=0</code>, that is read only inside that page's own tab, is never stored, and cannot turn the inspector on by itself. The accent color is also used for the outlines the extension draws around inspected fields; those are removed again when you turn the inspector off.</p>
         <p><strong>Permissions used:</strong></p>
         <ul>
           <li><code>activeTab</code> / <code>scripting</code> — inject the inspector only into the tab you explicitly enable it on.</li>
-          <li><code>storage</code> — remember your preferences (this popup's settings) locally in your browser.</li>
+          <li><code>storage</code> — remember your preferences (this popup's settings, the Settings page, and the list of remembered sites) locally in your browser.</li>
+          <li><code>optional host access</code> — only if you turn on <em>Auto-enable on this site</em>, Chrome asks you to allow access to that one origin. It is used for nothing except re-injecting the inspector when you load a page there. The list of remembered sites is shown in this popup and on the Settings page.</li>
         </ul>
-        <p>No host permissions are requested, so the extension cannot run in the background on sites you haven't activated it on.</p>
+        <p>With <em>Auto-enable on this site</em> off, the extension requests no host access at all and never runs in the background on sites you haven't activated it on. Turning auto-enable off here also gives the access back to Chrome immediately.</p>
       </div>
     </details>
   </main>
 
+  <script src="../shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

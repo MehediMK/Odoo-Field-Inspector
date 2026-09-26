@@ -32,11 +32,65 @@ show the field's real, authoritative definition.
   highlighting in sync as SPA routes change or content loads via AJAX;
   clicks are handled via event delegation so newly-added fields work
   immediately without any re-scan.
-- **Never touches your data** — while inspecting, clicks on fields are
-  intercepted before the page sees them, so labels never toggle
-  checkboxes, `<select>` never opens, and no value or focus state is ever
-  changed. Turning the inspector off restores completely normal page
-  behavior.
+- **Never touches your data (by default)** — while **Intercept clicks** is on
+  (the default), clicks on fields are intercepted before the page sees them,
+  so labels never toggle checkboxes, `<select>` never opens, and no value or
+  focus state is ever changed. Turning the inspector off restores completely
+  normal page behavior.
+- **Click-through mode (opt-in)** — turn **Intercept clicks** off and the
+  panel still opens on a click, but the click reaches the page normally, so
+  you can keep editing the form while inspecting it. Because the page's own
+  handlers run again, this mode can change form data — it's your choice, not
+  a new default. See [Data-safety mechanism](#data-safety-mechanism).
+- **Your colors, your call** — a gear button in the panel header opens the
+  in-panel **Settings** page: **Theme** (System / Light / Dark), an **Accent
+  color** (6 tested palettes that recolor links, tabs, the primary button *and*
+  the field highlights on the page), and **Density** (Comfortable / Compact).
+  Previously the panel followed your OS theme with no way to override it, which
+  is why it could look dark on a light system. System still follows the OS and
+  now repaints live when the OS flips. Everything else — Highlight, Intercept
+  clicks, Odoo Developer Mode, Show Sensitive Values, Copy format — is in the
+  same page, and the popup mirrors the theme and accent so the two never
+  disagree.
+- **A full Settings page in its own tab** — the popup keeps the quick toggles
+  it has always had, and an **All settings** button directly under **Enable
+  Inspector** opens the complete settings in a real tab
+  (`chrome.runtime.openOptionsPage`, so it works from a keyboard shortcut or
+  the extensions list too). That page is the one place everything lives:
+  Appearance, Detection, Behavior and Debug, plus **manage the sites the
+  inspector auto-enables on** and a privacy summary. The **preview panel is
+  the real thing** — the same stylesheet, icons and palette the actual panel
+  uses, painted in an open shadow root, so what you see is what you get. It
+  repaints as you change anything, and changes made in the popup show up here
+  live (and the other way round), because both read the same storage.
+- **Debug mode, on demand** — add **`?debug=1`** to a page's URL (or flip
+  **Debug logging** in Settings) for verbose console diagnostics, plus a live
+  readout in Settings of the effective theme/accent/density, the URL override
+  and what was inspected. `?debug=0` forces it off, the URL always wins over
+  the saved switch, and it is **never persisted** — it cannot change a
+  preference on any other page, and it never enables the inspector by itself.
+- **Odoo button information** — a dedicated **Button** tab tells you what a
+  button will actually do: the Python method it calls (`action_send`), the
+  action it opens, the `special=` built-in, whether it confirms first, and
+  which record (`data-model` / `data-id`) it would act on. Buttons are
+  deliberately **not** hijacked by a normal click — in the default mode a
+  Save/Delete button click stays a real button click — so buttons are
+  inspectable in exactly two ways: with **Intercept clicks** off, or from the
+  **Field Finder**, which selects a button without pressing it.
+  See [Odoo Developer Mode](#odoo-developer-mode).
+- **Sensitive values redacted by default** — values belonging to password,
+  hidden-token, and other secret-named fields never appear in the panel, in
+  Copy All, or in JSON output unless you turn on **Show sensitive values**.
+  See [Security & Privacy](#security--privacy).
+- **Per-site auto-enable (opt-in)** — turn on **Auto-enable on this site** in
+  the popup and the inspector starts by itself on every page you load at that
+  one origin, instead of resetting to off on each navigation. Chrome asks for
+  access to that origin only, the remembered sites are listed (and removable)
+  in the popup, and turning it off gives the access back. Matching is exact:
+  remembering `https://erp.example.com` does not imply
+  `https://intranet.example.com` or `http://erp.example.com`. With it off, the
+  extension requests no host access at all. See
+  [Injection model](#injection-model-why-permissions-are-minimal).
 - **Shadow DOM UI** — the inspector panel renders inside an isolated
   Shadow DOM tree, so host-page CSS can't distort it and the panel's CSS
   can never leak onto the page.
@@ -51,7 +105,20 @@ show the field's real, authoritative definition.
   current view (`widget=`, `domain=`, `context=`, `invisible=`, etc.),
   decoded selection options, a direct link to the field's own admin
   record, and a ready-to-paste `<field name="..."/>` view XML snippet.
-  See [Odoo Developer Mode](#odoo-developer-mode) below.
+   See [Odoo Developer Mode](#odoo-developer-mode) below.
+- **Odoo version detection + version-correct deep links** — the Odoo Field tab
+  shows your server's version (read once per tab), and the "Open in Odoo" link
+  is built in the URL style that version actually understands: the legacy
+  `/web#model=…&id=…` hash on 16 and earlier, the `/odoo/action-…` route on 17
+  and later. Odoo Online/SaaS build strings are handled, and an unreadable
+  version produces both links plus an explanation rather than a silent guess.
+   See [Odoo Developer Mode](#odoo-developer-mode).
+- **View XML IDs + inheritance chain** — a **View Stack** block tells you which
+  XML ID the page is actually rendered from and what it inherits from (e.g.
+  `my_addon.view_partner_form_inherit` → `base.view_partner_form`), with a
+  version-correct "Open in Odoo" link for each. A rendered page can't answer
+  this by itself: what you see is the merge of the whole stack.
+  See [Odoo Developer Mode](#odoo-developer-mode).
 - **Tabbed panel, Odoo-notebook style** — each info category (Odoo Field,
   Field Info, State, Selectors, Structure, Validation/Data/ARIA/Other
   Attributes, …) is its own tab, styled after Odoo's own form-view
@@ -77,9 +144,9 @@ show the field's real, authoritative definition.
   No network requests. See [Chatter Manager](#chatter-manager) below.
 - **Floating Options menu** — a single gear-icon button (bottom-right,
   while the inspector is enabled) opens Search Fields, Domain Builder,
-  Chatter Manager, Recent Fields, Highlight/Odoo Developer Mode
-  toggles, Copy Current Field, and Disable Inspector — all without
-  opening the popup.
+  Chatter Manager, Recent Fields, Highlight/Odoo Developer
+  Mode/Show Sensitive Values/Intercept Clicks toggles, Copy Current Field,
+  and Disable Inspector — all without opening the popup.
 - **Inspection history, jump-to-element, per-tab copy** — "Recent
   Fields" in the Options menu lets you reopen any of your last few
   inspected fields; a header button scrolls the real page element into
@@ -94,7 +161,10 @@ show the field's real, authoritative definition.
 ```text
 chrome-field-inspector/
 ├── manifest.json          # MV3 manifest (popup, service worker, permissions)
-├── background.js          # Service worker: per-tab badge bookkeeping only
+├── background.js          # Service worker: badge bookkeeping + per-site auto-enable
+├── shared.js              # Injected first: injection list, URL/origin helpers, DEFAULT_SETTINGS,
+│                         #   the panel stylesheet + icons, the light/dark palettes (popup + worker +
+│                         #   content scripts + options page all read this one copy)
 ├── content/
 │   ├── utils.js             # CSS selector / XPath generators, attribute helpers
 │   ├── odoo.js              # Odoo model detection + live ir.model.fields RPC lookup
@@ -107,16 +177,30 @@ chrome-field-inspector/
 ├── content.css             # Page-level highlight styles (scoped, !important, outline-only)
 ├── popup/
 │   ├── popup.html
-│   ├── popup.js            # Settings + enable/disable + on-demand injection
+│   ├── popup.js            # Quick settings + enable/disable + on-demand injection
 │   └── popup.css
+├── options/               # The full settings page (manifest options_ui, open_in_tab)
+│   ├── options.html        # Shell: groups, live panel preview, site manager, privacy card
+│   ├── options.js          # Renders the declarative GROUPS spec, previews with the real PANEL_CSS
+│   └── options.css         # Page chrome, painted from the same palette as the panel
 ├── icons/
 │   ├── icon16.png / icon32.png / icon48.png / icon128.png
 │   └── icon.svg            # Vector source for the icons above (dev-only)
 ├── tests/                  # Dev-only: not packaged, not referenced by manifest.json
 │   ├── domain.test.cjs       # node --test unit tests for content/domain.js
-│   ├── run-browser-tests.cjs # Drives the two fixtures below via headless Chrome --dump-dom
+│   ├── shared.test.cjs       # node --test unit tests for shared.js (URLs, injection list)
+│   ├── run-browser-tests.cjs # Drives the fixtures below via headless Chrome --dump-dom (the settings
+│   │                         #   fixture is loaded 3x: plain, ?debug=1, ?debug=0)
 │   ├── domain-builder.html   # Domain Builder integration fixture + assertions
-│   └── chatter.html          # Chatter Manager integration fixture + assertions
+│   ├── chatter.html          # Chatter Manager integration fixture + assertions
+│   ├── click-through.html    # Click interception / click-through + value redaction fixture
+│   ├── auto-enable.html      # Per-site auto-enable: enable/disable reporting contract fixture
+│   ├── odoo-version.html     # Server-version probe + version-gated deep links fixture
+│   ├── view-stack.html       # View XML ID + inherit chain, list-vs-form arch, fallback cases
+│   ├── button-info.html      # Odoo buttons: click-safety, view-derived type/special/confirm, Finder
+│   ├── settings-theme.html   # Gear → Settings page, theme/accent/density, debug URL override
+│   └── options-page.html     # The tab settings: every setting, the live real-panel preview,
+│                             #   storage sync, and the remembered-sites permission flow
 ├── docs/                   # GitHub Pages site: landing page + hosted privacy policy
 │   ├── index.html            # SEO landing page (Open Graph, JSON-LD, screenshots)
 │   ├── privacy.html          # Rendered copy of PRIVACY_POLICY.md, for a stable public URL
@@ -142,6 +226,9 @@ Run the test suite with:
 
 ```sh
 node --test tests/domain.test.cjs   # pure-logic unit tests
+node --test tests/shared.test.cjs   # origin/URL logic, accent palette, ?debug= parsing, injection-list
+                                    #   integrity, options-page wiring (manifest options_ui, resource paths,
+                                    #   every setting having exactly one control, one shared default set)
 node tests/run-browser-tests.cjs    # headless-Chrome integration checks (needs google-chrome or $CHROME_BIN)
 ```
 
@@ -149,21 +236,71 @@ node tests/run-browser-tests.cjs    # headless-Chrome integration checks (needs 
 
 ### Injection model (why permissions are minimal)
 
-The extension only requests `storage`, `activeTab`, and `scripting` — **no
-host permissions**, so Chrome never shows the broad "read and change all
-your data on all websites" warning. The content scripts are **not**
-statically registered in the manifest; instead, `popup/popup.js` injects
-them into the current tab on demand (`chrome.scripting.executeScript`),
-the first time you flip "Enable Inspector" in the popup for that tab. If
-they're already present (checked via a lightweight `PING` message) they
-are not re-injected. Every content script file is wrapped in a
-"already-loaded" guard so re-injection is always safe.
+The extension requests `storage`, `activeTab`, and `scripting` up front — **no
+host permissions** — so Chrome never shows the broad "read and change all
+your data on all websites" warning. The content scripts are **not** statically
+registered in the manifest; instead, `popup/popup.js` injects them into the
+current tab on demand (`chrome.scripting.executeScript`), the first time you
+flip "Enable Inspector" in the popup for that tab. If they're already present
+(checked via a lightweight `PING` message) they are not re-injected. Every
+content script file is wrapped in a "already-loaded" guard so re-injection is
+always safe.
+
+`shared.js` holds the single list of files to inject, loaded by both the popup
+and the service worker. That list is deliberately not duplicated: a release ZIP
+once shipped without the Domain Builder and Chatter Manager because the popup's
+copy of the list had fallen behind the repo, and `tests/shared.test.cjs` now
+fails if the list and the `content/` directory disagree in either direction.
+
+#### Per-site auto-enable (the one optional permission)
+
+`activeTab` only covers the tab you clicked in, so a normal navigation drops
+the inspector. To make it survive reloads, the popup offers **Auto-enable on
+this site**, which is the only path that asks for access to a site:
+
+- `manifest.json` declares `optional_host_permissions: ["http://*/*", "https://*/*"]`.
+  These grant nothing until the user accepts the request.
+- Checking the box calls `chrome.permissions.request()` for that **one exact
+  origin** (`https://erp.example.com/*`) and stores it in
+  `fiRememberedOrigins`. The request must happen directly inside the click's
+  user gesture, which is why the popup requests before any `await`.
+- `background.js` then watches `chrome.tabs.onUpdated` for `status ===
+  "complete"`. If the tab's origin is in that list **and** Chrome still
+  reports the permission as granted, it injects the shared file list and sends
+  `FI_ENABLE` with your saved settings.
+- Unchecking the box, or pressing **Remove** next to a remembered site, calls
+  `chrome.permissions.remove()` as well as clearing storage, so the access goes
+  back to Chrome and disappears from `chrome://extensions` too.
+
+Properties worth knowing:
+
+- **Exact-origin matching.** `https://erp.example.com` does not match
+  `http://erp.example.com`, a subdomain, or a different port, because the
+  granted permission is equally narrow. All of this logic lives in
+  `shared.js` and is unit-tested.
+- **Permission is re-checked on every load.** Revoking an optional permission
+  from `chrome://extensions` doesn't touch extension storage, so the worker
+  asks `chrome.permissions.contains()` before injecting. The popup also drops
+  remembered entries whose permission is gone, so you never see a checkbox
+  that silently does nothing.
+- **Only `http`/`https` can be remembered.** A `file://` page can still be
+  inspected manually (if you've allowed file access), but no host permission
+  can be requested for it, so the option is disabled there rather than
+  offering a setting that would never fire.
+- **Opting out for one tab.** If you turn the inspector off on a remembered
+  site, the worker remembers that for the current tab + origin and stays quiet
+  on reloads. The inspector distinguishes a *user* disable from its own
+  `pagehide` teardown via a `userInitiated` flag, so unloading a page never
+  looks like "the user turned this off". Navigating that tab elsewhere, or
+  closing it, clears the opt-out.
+- **Default is off.** Nothing is injected anywhere until you either enable a
+  tab from the popup or remember a site.
 
 ### Content script split
 
-All four `content/*.js` files load into the **same isolated world** (per
+All `content/*.js` files load into the **same isolated world** (per
 Chrome's content-script execution model), in the order declared in
-`popup.js`'s injection call, so top-level `const`/functions declared in
+`shared.js`'s `CONTENT_FILES`, so top-level `const`/functions declared in
 one file are visible to files loaded after it — no bundler or ES module
 loader needed:
 
@@ -265,6 +402,19 @@ are called before the panel is shown — the page's own click handler for
 that element never runs. Clicks that don't resolve to a field are passed
 through untouched.
 
+Both `preventDefault()` calls are gated on the **Intercept clicks**
+setting (`interceptClicks`, default `true`). With it off, the inspector
+still resolves the click and opens the panel, but the event continues to
+the page, so the form stays usable while you inspect it. The setting is
+available in the popup ("Click Behavior") and in the on-page options
+menu.
+
+One click-through caveat: Odoo often re-renders a form after a change
+fires an `onchange`. The panel is built from the element as it was when
+the click resolved, so **Jump to element** can do nothing if that node
+was replaced a moment later (`ui.jumpToElement` silently skips detached
+nodes rather than jumping somewhere wrong).
+
 ## Odoo Developer Mode
 
 When the clicked field lives inside an Odoo form, list, **wizard**
@@ -291,15 +441,76 @@ Odoo-specific lookup below is skipped entirely, with no network activity.
   / `<th data-name="...">`). Results are cached per (model, field) for the
   life of the page. A direct **"Open in Odoo"** link to the field's own
   `ir.model.fields` record (Settings → Technical → Fields) is included.
+- **Server version, and version-correct deep links**: one
+  `ir.config_parameter.get_param` read of `web.base.build.description`
+  (falling back to `web.base.build.version`) — a parameter every Odoo since
+  8 has shipped, at most once per tab — yields the server's version, shown
+  as a **Server Version** row in the Odoo Field tab. It matters because Odoo
+  **17 replaced** the `/web#model=…&id=…` hash URLs with
+  `/odoo/action-<xmlid>` routes, so a hardcoded legacy link is a dead page on
+  a modern server and an `/odoo/…` link 404s on an older one:
+  - version **≥ 17** → `/odoo/action-base.action_ir_model_fields?active_id=<id>`
+  - version **≤ 16** → `/web#model=ir.model.fields&id=<id>&view_type=form`
+  - version **unknown** (non-Odoo page, RPC blocked, unusual build string) →
+    the conservative legacy link, *plus* the 17+ field-list link and a note
+    explaining why both are offered. It never silently guesses.
+  - Odoo Online/SaaS build strings (`saas~17.2`) are parsed for their major
+    version, so they're classified like any other.
+  - Copy All and Copy Tab use the same version-gated link as the panel, so
+    pasted text doesn't rot on a newer server.
 - **Declared-in-this-view attributes**: a second, independent lookup
-  (`get_views` on the model, fetching its default form arch) finds how the
-  field is actually declared in that view — `widget=`, `domain=`,
-  `context=`, `invisible=`, `required=`, `readonly=`, `options=`, `groups=`
-  — the overrides `ir.model.fields` alone can't show, since that's only the
-  model-level definition. When a field appears more than once in the arch
-  (e.g. it's also a column in an embedded one2many sub-view), the
-  least-nested match is preferred, since a deeply-nested one is more
-  likely to belong to the sub-view than the field actually clicked.
+  (`get_views` on the model, fetching the default **form** or **list** arch to
+  match what you clicked) finds how the field is actually declared in that view
+  — `widget=`, `domain=`, `context=`, `invisible=`, `required=`, `readonly=`,
+  `options=`, `groups=` — the overrides `ir.model.fields` alone can't show,
+  since that's only the model-level definition. When a field appears more than
+  once in the arch (e.g. it's also a column in an embedded one2many
+  sub-view), the least-nested match is preferred, since a deeply-nested one is
+  more likely to belong to the sub-view than the field actually clicked.
+  Odoo renamed the list view type from `tree` to `list` in 17, so the type is
+  retried under both names — a pre-17 server answers the `tree` request.
+- **View XML IDs and the inheritance chain**: the **View Stack** block answers
+  "which XML ID am I actually looking at, and what does it inherit from?" — the
+  question a rendered page cannot answer on its own, because what you see is
+  the *merge* of a whole view stack:
+  - the active view's record id comes from the same `get_views` response;
+  - `ir.ui.view.inherit_id` is walked upward, so every ancestor is listed by
+    its own external ID — e.g. your `my_addon.view_partner_form_inherit` on
+    top of `base.view_partner_form`, which is exactly what you need when a
+    custom view is overriding a standard one;
+  - all those IDs are resolved to XML IDs in **one** `ir.model.data` request,
+    because that is the only reliable way to get an external ID for a record;
+  - each view in the stack gets its own version-correct **Open in Odoo** link
+    (Settings → Technical → Views), so you can jump straight to the one you
+    suspect;
+  - the chain is depth-capped and cycle-guarded, and if a view is unreadable
+    for your user (record rules on `ir.ui.view`) the chain is reported as
+    *incomplete* rather than failing the whole lookup;
+  - a view created in the UI rather than in a data file has no external ID at
+    all — that's shown as "no external ID" instead of being hidden.
+  - It deliberately does **not** download every ancestor's `arch_db`: a view
+    arch can be hundreds of KB. The panel therefore names the views that
+    contributed and says so, rather than pretending to attribute one field
+    node to one XML file.
+- **Button information** (Odoo Developer Mode on, button inspected): a button
+  has no `ir.model.fields` row, so no field lookup is made at all. Instead the
+  same `get_views` arch is searched for the `<button name="…">` declaration,
+  which is where the interesting attributes actually live:
+  - the rendered DOM does **not** keep Odoo's `type=`, `special=` or
+    `confirm=` — Odoo's web client consumes them and renders a plain
+    `type="button"`. So the panel takes `type`/`special`/`confirm` from the view
+    and labels the DOM's `type` for what it is (the HTML type). A button whose
+    view declaration can't be read says so instead of guessing;
+  - `type="object"` vs `type="action"` is explained in words, and a
+    `%(xml_id)` value is recognised as an action reference rather than reported
+    as a method name you could go looking for in Python;
+  - `groups=`, `invisible=`, `readonly=` and friends come from the arch, which
+    is the only place they exist — the DOM only ever shows their *result*;
+  - `data-model` / `data-id` come from the DOM, because they only exist while a
+    record is open — that's the record the action would run against;
+  - the same least-nested rule as fields applies: a Save button declared both in
+    the form and in an embedded sub-view reports the form's declaration, with
+    the duplicate count shown.
 - **Non-blocking**: the panel opens instantly with everything derivable
   from the DOM; each Odoo sub-section shows its own "Looking up…" state
   and fills in independently as its network response lands. Clicking a
@@ -444,9 +655,28 @@ metadata. Set `CHROME_BIN` if the executable is not named `google-chrome`.
 7. Toggle **Enable Inspector** off in the popup to fully restore normal
    page behavior.
 
-Your Form View / List View / Highlight / Copy Format preferences persist
-across sessions via `chrome.storage.local` and apply live if you change
-them while the inspector is already enabled on a tab.
+Your Form View / List View / Highlight / Copy Format / Odoo Developer
+Mode / Show Sensitive Values / Intercept Clicks preferences persist across
+sessions via `chrome.storage.local` and apply live if you change them
+while the inspector is already enabled on a tab. Theme, Accent and Density
+live there too.
+
+The popup is deliberately small: the quick toggles, and an **All settings**
+button under **Enable Inspector** that opens the full settings in its own
+tab (Appearance, Detection, Behavior, Debug, the auto-enable sites, and a
+privacy summary, with a live preview of the real panel). Both surfaces read
+and write the same storage, so a change made in one appears in the other
+immediately — you never have to think about which one is "the" settings.
+
+The list of origins you chose for auto-enable is stored separately in
+`fiRememberedOrigins` in the same local storage, and is shown with a
+**Remove** button both in the popup and in the full settings tab. Adding a
+site there asks Chrome for that **one** origin's permission and nothing
+else.
+
+To work the form while inspecting it, turn **Intercept clicks** off
+(click-through mode). The default is on, so clicking fields can't change
+anything until you opt out.
 
 ## Security & Privacy
 
@@ -457,24 +687,45 @@ Mode exception sends and to whom). Summary:
 - All field/column analysis happens **entirely client-side**, inside the
   content script running in your tab. Nothing about the page — its HTML,
   field values, or your interactions — is ever sent anywhere, **except**
-  the Odoo Developer Mode field-definition lookup described above: when
-  (and only when) a clicked field is recognized as an Odoo field, its
-  model and technical field name are sent, via an `ir.model.fields`
-  RPC call, to the **same Odoo server the page is already on** — using
-  your existing logged-in session (same-origin `fetch`, no separate
-  credentials, no third-party endpoint). No field *values*, page content,
-  or browsing activity are ever included in that call.
+  the Odoo Developer Mode lookups described above: when (and only when) a
+  clicked field is recognized as an Odoo field, its model and technical
+  field name are sent, via an `ir.model.fields` RPC call, to the **same
+  Odoo server the page is already on** — using your existing logged-in
+  session (same-origin `fetch`, no separate credentials, no third-party
+  endpoint) — along with one hard-coded configuration key name
+  (`web.base.build.description`) to read your server's version. No field
+  *values*, page content, or browsing activity are ever included in those
+  calls.
 - The extension does **not** track browsing activity, does **not** collect
   analytics, and does **not** store page content anywhere (not even
-  locally) — `chrome.storage.local` is used only for your four UI
-  preferences (Form View / List View / Highlight / Copy Format). The Odoo
+  locally) — `chrome.storage.local` is used only for your UI
+  preferences (Form View / List View / Highlight / Copy Format / Odoo
+  Developer Mode / Show Sensitive Values / Intercept Clicks) and, if you opt
+  in, the list of origins you chose to auto-enable on. The Odoo
   field-metadata cache lives only in memory for the life of the tab.
-- No host permissions are requested. The content scripts only run on a
-  tab after you explicitly enable the inspector for it via the popup
-  (`activeTab` + `scripting`), and they stop running the moment you
-  navigate away or disable the inspector.
+- **No host permissions are requested up front.** The content scripts only run
+  in a tab after you explicitly enable the inspector for it via the popup
+  (`activeTab` + `scripting`), and they stop running the moment you navigate
+  away or disable the inspector.
+- The one exception is the permission **you** can grant per site: turning on
+  **Auto-enable on this site** makes Chrome ask for access to that single
+  origin, after which the inspector is injected automatically on page loads
+  there. It's used for nothing else, it's optional, it's listed with a
+  **Remove** button in the popup, and turning it off removes the permission
+  from Chrome entirely. Nothing about the page is stored or transmitted by
+  remembering a site — the entry is just the origin string. See
+  [Injection model](#injection-model-why-permissions-are-minimal).
 - The extension never submits forms and never programmatically changes a
-  field's value, checked state, or focus.
+  field's value, checked state, or focus. With **Intercept clicks** on
+  (the default) the page's own handlers don't see field clicks either. With
+  it off — click-through mode — clicks reach the page normally, so the
+  form can change exactly as it would without the extension. That is the
+  point of the mode, and the reason it isn't the default.
+- Values of **password, hidden-token and other secret-named fields** are
+  redacted before they reach the panel, Copy All, JSON output, or the
+  Recent Fields cache, unless **Show sensitive values** is explicitly
+  turned on. Redaction happens while the field's info object is built, so
+  there is no rendering path that could show a secret the detector marked.
 
 ## Known Limitations
 
@@ -600,15 +851,154 @@ After loading the extension via **Load unpacked**:
       button scrolls to and flashes the real element; dragging the
       header repositions the panel.
 
+15. **Click-through mode**
+    - With the inspector enabled, click a checkbox that has a real page
+      click handler (e.g. a "remember me" box).
+    - Expected: the checkbox does **not** toggle (Intercept clicks is on
+      by default) and the panel opens.
+    - Turn **Intercept clicks** off in the popup (or in the on-page options
+      menu), then click the same checkbox again.
+    - Expected: the checkbox toggles normally *and* the panel opens —
+      the form stays usable while inspecting.
+    - Turn Intercept clicks back on; the checkbox stops toggling again.
+
+16. **Sensitive value redaction**
+    - Open a page with a login form and click the password input.
+    - Expected: Current Value and Default Value both read
+      `(redacted — sensitive field)`, the HTML preview shows no real
+      value, and a note explains why. **Copy All** in both plain text and
+      JSON contains no part of the password.
+    - Repeat on a hidden input whose name contains `csrf`/`token`, and on
+      an ordinary field (e.g. an email input): ordinary values still show.
+    - Turn **Show sensitive values** on. Expected: the password is now
+      displayed; turn it back off and the Recent Fields entry is
+      re-redacted too.
+
+17. **Per-site auto-enable**
+    - Open the popup on an Odoo (or any) site and turn on **Auto-enable on
+      this site**.
+    - Expected: Chrome shows its permission prompt for that origin only;
+      after accepting, the checkbox is checked and the origin appears in the
+      list below it.
+    - Reload the page (F5). Expected: the badge shows "ON" on its own, with
+      no need to open the popup, and the highlighted fields are back.
+    - Use **Disable Inspector** (popup or on-page menu) and reload again.
+      Expected: it stays off for that tab. Navigate that tab to a different
+      site and back, or close the tab. Expected: auto-enable applies again.
+    - Open the popup and press **Remove** next to the remembered origin.
+      Expected: the entry disappears, and `chrome://extensions` no longer
+      lists site access for Field Inspector.
+    - Open the popup on a different origin (e.g. a subdomain) and confirm
+      **Auto-enable on this site** is unchecked there.
+
+18. **Odoo version + deep links**
+    - On an Odoo 17+ instance, enable the inspector and click an Odoo field.
+    - Expected: the Odoo Field tab shows a **Server Version** row, and
+      "Open in Odoo" points at `/odoo/action-base.action_ir_model_fields`
+      (not `/web#model=…`). Click it: the field's record opens in a new tab.
+    - Repeat on Odoo 16 or earlier. Expected: the link is the legacy
+      `/web#model=ir.model.fields&id=…` shape and still opens the record.
+    - Copy All with the panel open and check the pasted **Field Record** line
+      uses the same URL style as the link.
+    - Turn **Odoo Developer Mode** off, click a field. Expected: no version
+      row, no link, and no request to the server (check the Network tab).
+
+19. **Theme, accent and debug**
+    - Click the **gear** in the panel header. Expected: a Settings page opens
+      with Appearance (Theme / Accent color / Density), Behavior (every existing
+      toggle) and Debug.
+    - Pick **Dark**, then **Light**. Expected: the panel repaints immediately,
+      and the choice is remembered after a disable/enable round trip.
+    - Pick **Teal**. Expected: links, the active tab, the primary button *and*
+      the dashed outline the extension draws around detected fields all change
+      together — hover a field to see the solid hover outline and tint follow.
+    - Choose **System**, then flip your OS light/dark. Expected: the panel
+      repaints live, with no reload.
+    - Open a page with `?debug=1`. Expected: console diagnostics appear and the
+      Settings → Debug switch shows "on" but is **disabled**, explaining that the
+      URL forced it. Now try `?debug=0`. Expected: the opposite, and the saved
+      switch is ignored in both directions.
+    - Disable the inspector. Expected: the accent is removed from the page
+      (`<html>` carries no leftover `data-fi-accent`), so the host page is left
+      exactly as it was found.
+20. **Odoo button information**
+    - On a form, click **Save** with the default settings. Expected: the button
+      acts normally and **no** panel opens — a normal click is never hijacked.
+    - Turn **Intercept clicks** off and click it again. Expected: the panel
+      opens on a **Button** tab showing `Calls Method: action_save`, the
+      `object` type, and `data-model`/`data-id` for the record.
+    - With Odoo Developer Mode on, open its **Odoo View** tab. Expected:
+      `groups=`, `invisible=` and `classname=` appear even though the rendered
+      button has none of them, plus the view's XML ID.
+    - Try a button with a `confirm=` dialog and one with `special="discard"`.
+      Expected: a warning line naming the confirmation text, and an explanation
+      that a `special=` button is framework behaviour.
+    - Open the Field Finder (floating button → search). Expected: Odoo buttons
+      are listed with a `Button` tag, and selecting one opens its panel
+      **without the button being pressed**.
+21. **View XML IDs + inherit chain**
+    - On a form, click any field. Expected: a **View Stack** block shows the
+      active view's XML ID (e.g. `base.view_partner_form`) and, if a custom
+      module extends it, the chain beneath it (e.g. `my_addon.
+      view_partner_form_inherit`). Each has an **Open** link that lands on
+      Settings → Technical → Views.
+    - Click a **list column** or a list data cell. Expected: the View Stack
+      names the list view's own XML ID (not the form view's), and
+      "Declared In Current View" says **(list)**, not (form).
+    - Check the Network tab. Expected: one `get_views`, one `ir.ui.view.read`
+      per ancestor, and exactly **one** `ir.model.data.search_read` for the
+      whole chain — no `arch_db` downloads.
+    - If your user can't read an ancestor view, Expected: the chain is marked
+      "incomplete" and the active view is still shown.
+22. **The full settings tab**
+    - Open the popup and click **All settings** (directly under **Enable
+      Inspector**). Expected: a real browser tab opens — not a small popup —
+      showing Appearance, Detection, Behavior and Debug, a live panel preview,
+      a sites section and a privacy card.
+    - Change **Theme** to Dark, then pick **Pink**. Expected: the previewed
+      panel repaints as you click, the page's own controls re-tint to the same
+      accent, and the state line names the resolved theme and accent.
+    - Reopen the popup and change the theme there while the settings tab is
+      still open. Expected: the tab updates itself, controls included.
+    - Pick **System** and flip your OS light/dark. Expected: the preview *and*
+      the accent swatches both follow, with no reload.
+    - Paste a site such as `https://erp.example.com/web/webclient#home` under
+      the auto-enable sites and add it. Expected: Chrome asks for that **one**
+      site, it appears in the list, and the input clears. Paste `*` or an
+      address with a password in it: Expected: refused, with nothing requested.
+      Add the same site again: Expected: **no** second permission prompt.
+    - Remove a site. Expected: the permission is handed back and the row
+      disappears.
+
 ## Extending
 
+- **New accent color**: add one entry to `ACCENTS` in `shared.js` with a
+  `light` and a `dark` object (same keys — `tests/shared.test.cjs` enforces
+  that, and checks `strong` is dark enough for white text). The settings
+  picker, the popup swatches, the panel and the page highlights all read from
+  that one table, so nothing else needs touching.
+- **New setting**: add the key to `DEFAULT_SETTINGS` in
+  `content/content.js` *and* `popup/popup.js`, render a control in
+  `ui.settingsBodyHtml` (every control carries `data-setting`, and the click
+  handler in `ensureHost` routes it through `ui.onOptionSetting`, so
+  persistence and tab-to-content syncing come for free).
 - **New field pattern**: add a selector to `FORM_CONTROL_SELECTOR` (or a
   new branch in `describeFieldType`) in `content/detector.js`.
+- **New button pattern**: add a selector to `ODOO_BUTTON_SELECTOR`; the
+  button branch of `resolveInspectable` only runs when **Intercept clicks**
+  is off, and `listAllFields` indexes the same selector for the Field
+  Finder. Buttons read their `type`/`special`/`confirm`/`groups` from the
+  view via `odoo.fetchViewNodeAttrs(model, "button", nameAttr, viewType)`.
+- **New element kind**: add the kind in `detector.js`, dispatch it in
+  `content.js`'s `inspectElement`, and add a `render<Kind>Info` tab in
+  `ui.js` (`shortLabelFor`, `updateBadge`, `buildCopyAllText` and
+  `finderKindLabel`/`finderKindPill` all have per-kind branches).
 - **New info field**: add it to the object returned by
-  `buildFormFieldInfo`/`buildColumnInfo`/`buildDataCellInfo` in
-  `content/detector.js`, then render it via the `row(...)` helper inside
-  the relevant tab in `content/ui.js`'s `renderFormInfo`/`renderListInfo`/
-  `renderDataCellInfo` — each of those returns an array of `{ title,
+  `buildFormFieldInfo`/`buildColumnInfo`/`buildDataCellInfo`/
+  `buildButtonInfo` in `content/detector.js`, then render it via the
+  `row(...)` helper inside the relevant tab in `content/ui.js`'s
+  `renderFormInfo`/`renderListInfo`/`renderDataCellInfo`/`renderButtonInfo`
+  — each of those returns an array of `{ title,
   icon, html }` tab objects; `row(...)` output gets wrapped in `table(...)`
   for the bordered/striped look, and `kvTable(...)`/`attrList(...)` do the
   same for key/value lists (attributes, selection options). Add a new tab
@@ -619,11 +1009,31 @@ After loading the extension via **Load unpacked**:
   it in `popup/popup.js`'s `applySettingsToUI`/`onSettingChange`, and
   consume it from `state.settings` in `content/content.js` /
   `content/detector.js`.
+- **New setting (the full page)**: add the key and its default to
+  `DEFAULT_SETTINGS` in `shared.js` (that one object is the only source of
+  truth — the popup, the panel and the settings tab all read it), then add
+  one entry to the `GROUPS` spec in `options/options.js`. That spec is
+  declarative: `segmented`, `choice` (swatches), `switch` and `select` all
+  read and write the key verbatim, so a control needs no other wiring.
+  `tests/shared.test.cjs` fails if a key in `DEFAULT_SETTINGS` has no row
+  (or two), which is the failure mode worth catching at review time rather
+  than in a shipped settings tab.
+- **New palette colour**: both palettes live in `PALETTE` in `shared.js` and
+  both surfaces are generated from it, so a new `--fi-*` variable reaches the
+  panel *and* the settings page with no second edit. Accent-specific
+  variables are the exception — `applyThemeVars` paints those as inline
+  custom properties on the panel host and on `:root`.
+- **New Odoo view metadata**: `odoo.fetchViewStack(model, viewType)` in
+  `content/odoo.js` resolves the active view + its `inherit_id` chain and
+  their external IDs; render it with `renderViewStackBlock(info)` in
+  `content/ui.js`. Both are cached per `model:viewType`, and the same
+  `fetchViewArch` result backs `fetchViewFieldAttrs`, so adding a new
+  view-level lookup costs no extra request.
 - **New Odoo field metadata**: add the ORM field to `FIELD_META_FIELDS` in
   `content/odoo.js`, then render it in `renderOdooTabContent` in
   `content/ui.js`. Any new content script file must also be added to
-  `CONTENT_FILES` in `popup/popup.js` (in load order) or it will never be
-  injected.
+  `CONTENT_FILES` in `shared.js` (in load order) or it will never be
+  injected; `tests/shared.test.cjs` fails until you do.
 - **New Field Finder source**: add another `scope.querySelectorAll(...)`
   branch to `detector.listAllFields` in `content/detector.js` — it already
   accepts an optional root element, so a scoped (e.g. wizard-only) search
