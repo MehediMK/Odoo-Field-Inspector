@@ -134,6 +134,52 @@
   footer a { color: var(--fg-muted); }
   footer a:hover { color: var(--accent-2); }
 
+  /* ---- shared sticky site navigation ---- */
+  .site-nav {
+    position: sticky; top: 0; z-index: 60;
+    background: rgba(11, 14, 20, 0.85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 0; }
+  .nav-brand {
+    display: flex; align-items: center; gap: 9px;
+    font-weight: 800; font-size: 15px; color: var(--fg); text-decoration: none; letter-spacing: -0.01em;
+  }
+  .nav-brand img { border-radius: 7px; }
+  .nav-brand:hover { color: var(--accent-2); }
+  .nav-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-left: auto; }
+  .nav-links a {
+    color: var(--fg-muted); text-decoration: none; font-size: 14px; font-weight: 600;
+    padding: 7px 11px; border-radius: 8px;
+  }
+  .nav-links a:hover { color: var(--fg); background: rgba(167, 139, 250, 0.12); }
+  .nav-links a[aria-current="page"] { color: var(--accent-2); background: rgba(167, 139, 250, 0.16); }
+  .nav-links a.nav-cta { color: #1a1030; background: var(--accent); font-weight: 700; margin-left: 6px; }
+  .nav-links a.nav-cta:hover { background: var(--accent-2); color: #1a1030; }
+
+  /* ---- screenshot gallery + guide teaser ---- */
+  .shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 20px; }
+  .shot-grid .shot { margin: 0; }
+  .gallery-more { margin: 26px 0 0; font-size: 15px; color: var(--fg-muted); }
+  .guide-panel {
+    background: radial-gradient(circle at 100% 0%, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0) 55%), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 14px; padding: 26px 28px;
+    display: flex; gap: 26px; align-items: center; flex-wrap: wrap;
+  }
+  .guide-panel .guide-text { flex: 1 1 340px; min-width: 0; }
+  .guide-panel h3 { margin: 0 0 8px; font-size: 21px; }
+  .guide-panel p { margin: 0 0 14px; color: var(--fg-muted); font-size: 15px; max-width: 640px; }
+  .guide-panel ul { margin: 0 0 16px; padding-left: 20px; color: var(--fg-muted); font-size: 14.5px; }
+  .guide-panel li { margin: 5px 0; }
+  .guide-panel .guide-shot { flex: 0 0 auto; width: min(300px, 100%); }
+  .guide-panel .guide-shot .shot { margin: 0; }
+
+  @media (max-width: 480px) {
+    .nav-links { margin-left: 0; width: 100%; }
+  }
+
   @media (max-width: 480px) {
     .hero-inner { flex-direction: column; align-items: flex-start; }
     .cta-row { width: 100%; }
@@ -142,6 +188,20 @@
 </style>
 </head>
 <body>
+
+<nav class="site-nav" aria-label="Site">
+  <div class="wrap nav-inner">
+    <a class="nav-brand" href="index.html"><img src="assets/icon128.png" alt="" width="26" height="26" /><span>Odoo&nbsp;Field&nbsp;Inspector</span></a>
+    <div class="nav-links">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="guide.html">User Guide</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub</a>
+      <a class="nav-cta" href="https://chromewebstore.google.com/detail/eofdcaodbfhimfnipomdfpnmhicdifaf?utm_source=item-share-cb">Get&nbsp;extension</a>
+    </div>
+  </div>
+</nav>
 
 <header class="hero">
   <div class="wrap hero-inner">
@@ -153,6 +213,7 @@
       <div class="cta-row">
         <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/eofdcaodbfhimfnipomdfpnmhicdifaf?utm_source=item-share-cb">Get Chrome Extension</a>
         <a class="btn btn-primary" href="https://github.com/MehediMK/Odoo-Field-Inspector">Get it on GitHub</a>
+        <a class="btn btn-secondary" href="guide.html">User Guide</a>
         <a class="btn btn-secondary" href="privacy.html">Privacy Policy</a>
       </div>
       <div class="chip-row">
@@ -161,8 +222,11 @@
         <span class="chip">Technical Field Name</span>
         <span class="chip">ir.model.fields</span>
         <span class="chip">Field Finder</span>
+        <span class="chip">Button Inspector</span>
+        <span class="chip">View Stack</span>
         <span class="chip">Domain Builder</span>
         <span class="chip">Chatter Manager</span>
+        <span class="chip">Settings Tab</span>
       </div>
     </div>
   </div>
@@ -270,6 +334,83 @@
       <img src="assets/screenshot_5_chatter_manager.jpg" alt="Chatter Manager panel showing a searchable list of loaded chatter messages and internal notes" width="1280" height="800" />
       <div class="shot-caption">Chatter Manager: hide or expand a form's chatter, then search and filter its already-loaded messages, notes, and tracked changes.</div>
     </div>
+
+    <h2 style="margin-top:36px;">More of the tool, shot by shot</h2>
+    <p class="section-sub">Every functionality illustrated — settings, buttons, views, redaction, debug and more. The <a href="guide.html">user guide</a> walks through all of them.</p>
+    <div class="shot-grid">
+      <div class="shot">
+        <img src="assets/screenshot_6_settings_page.jpg" alt="Full settings page in its own tab with appearance, detection, behavior and debug sections plus a live panel preview" width="1440" height="1200" loading="lazy" />
+        <div class="shot-caption">The complete Settings page in its own browser tab, with a live preview of the real panel.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_9_button_inspector.jpg" alt="Button inspector showing the Python method an Odoo button calls and the record it targets" width="1440" height="900" loading="lazy" />
+        <div class="shot-caption">Button inspector: the Python method, action, <code>special=</code>/<code>confirm=</code> and target record.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_10_view_stack.jpg" alt="View Stack resolving the active view's XML ID and its inheritance chain" width="1440" height="1060" loading="lazy" />
+        <div class="shot-caption">View Stack: which XML ID the page is rendered from, and what it inherits from.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_12_password_redacted.jpg" alt="Password field value redacted in the panel's State tab" width="1440" height="900" loading="lazy" />
+        <div class="shot-caption">Sensitive values stay redacted — in the panel, Copy All, JSON and history — unless you opt in.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_14_debug_readout.jpg" alt="Debug readout of effective extension settings in the settings page" width="1440" height="940" loading="lazy" />
+        <div class="shot-caption">Debug mode: verbose console diagnostics plus a live readout of the effective settings.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_15_dark_panel.jpg" alt="Panel in dark theme with a purple accent color" width="1440" height="940" loading="lazy" />
+        <div class="shot-caption">Appearance: Light/Dark/System themes, six accent colors that also recolor field outlines, two densities.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_16_field_info.jpg" alt="Field Info tab showing a field's element, type, id, name and classes" width="400" height="505" loading="lazy" />
+        <div class="shot-caption">Field Info: element, type, id, name, classes and placeholder of the clicked field.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_17_selectors.jpg" alt="Selectors tab with a unique CSS selector and XPath" width="400" height="365" loading="lazy" />
+        <div class="shot-caption">Selectors: the shortest unique CSS selector and XPath, ready to paste into a test.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_19_column_info.jpg" alt="Column Info tab for a list column with selectors and table info" width="391" height="550" loading="lazy" />
+        <div class="shot-caption">Column Info: name, position and type of a list column, plus its selectors.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_18_options_menu.jpg" alt="Floating options menu with search, domain builder, chatter, recent fields and quick toggles" width="280" height="590" loading="lazy" />
+        <div class="shot-caption">The floating Options menu: finder, tools, recent fields and quick toggles without the popup.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_7_settings_sites.jpg" alt="Settings page listing remembered auto-enable sites with Remove buttons" width="662" height="732" loading="lazy" />
+        <div class="shot-caption">Manage the sites the inspector auto-enables on, with the privacy summary.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot_8_popup_settings.jpg" alt="Popup with the All settings button under Enable Inspector" width="420" height="780" loading="lazy" />
+        <div class="shot-caption">The popup's All settings button opens everything in a real browser tab.</div>
+      </div>
+    </div>
+    <p class="gallery-more">…and 19 screenshots in total, each tied to a feature — see the <a href="guide.html">user guide</a>.</p>
+  </div>
+</section>
+
+<section id="guide">
+  <div class="wrap">
+    <div class="guide-panel">
+      <div class="guide-text">
+        <h3>New here? Read the user guide</h3>
+        <p>A step-by-step walkthrough of every functionality — with a screenshot for each one: quick start, field inspection, selectors, columns, copying, Field Finder, buttons, View Stack, click safety, Domain Builder, Chatter Manager, options menu, appearance, the settings tab, auto-enable sites, debug mode, privacy and FAQ.</p>
+        <ul>
+          <li><strong>18 sections</strong> in the order you actually meet the features</li>
+          <li><strong>19 real screenshots</strong> — no mockups</li>
+          <li>Deep links to every section, plus an FAQ</li>
+        </ul>
+        <a class="btn btn-primary" href="guide.html">Open the user guide</a>
+      </div>
+      <div class="guide-shot">
+        <div class="shot">
+          <img src="assets/screenshot_11_list_view.jpg" alt="Panel on a list data cell showing the list view's XML ID and column attributes" width="1440" height="1060" loading="lazy" />
+          <div class="shot-caption">From the guide: a list cell reporting <code>sale.view_order_tree</code> — the list view, not the form view.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -292,6 +433,8 @@
     <span>&copy; 2026 Odoo Field Inspector. Not affiliated with or endorsed by Odoo S.A.</span>
     <span>
       <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="guide.html">User Guide</a>
       &nbsp;·&nbsp;
       <a href="privacy.html">Privacy Policy</a>
     </span>

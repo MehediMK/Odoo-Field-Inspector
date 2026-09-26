@@ -382,7 +382,7 @@ cap is already reached, swapping one of these for a real-Odoo screenshot
 
 ## Package
 
-Upload `field-inspector-v1.10.0.zip`. It was rebuilt after the full-page
+Upload `field-inspector-v1.3.0.zip`. It was rebuilt after the full-page
 Settings tab was added, and it was verified against the working tree: every
 file listed in `shared.js`'s `CONTENT_FILES`/`CONTENT_CSS` is present in the
 ZIP, `options/options.html` is present (the manifest points at it and a
@@ -393,38 +393,32 @@ file is byte-identical to its source. It contains only the runtime files:
 `STORE_LISTING.md`, `CHECKLIST_README.md`, `tests/`, `docs/`,
 `icons/icon.svg`, and `promo/` are dev-only and intentionally excluded.
 
-> `shared.js` is new in 1.5.0 and is **required at runtime** — the popup,
-> the service worker, the content scripts and the settings tab all load it for
-> the injection list, origin helpers, shared defaults and panel stylesheet.
-> Omitting it breaks the extension outright, so keep it in the file list.
-> `options/` is new in 1.10.0 and is **required**: the manifest's
-> `options_ui` points at `options/options.html`, so leaving the directory out
-> makes both the popup's "All settings" button and the extensions-menu entry
-> dead on arrival.
+> `shared.js` is **required at runtime** — the popup, the service worker, the
+> content scripts and the settings tab all load it for the injection list,
+> origin helpers, shared defaults and panel stylesheet. Omitting it breaks the
+> extension outright, so keep it in the file list.
+> `options/` is **required** too: the manifest's `options_ui` points at
+> `options/options.html`, so leaving the directory out makes both the popup's
+> "All settings" button and the extensions-menu entry dead on arrival.
 
 Rebuild it from the repo root with an explicit file list (never a broad
 `zip -r` of the project directory, which would ship the docs and tests):
 
 ```sh
-rm -f field-inspector-v1.10.0.zip
-zip -r field-inspector-v1.10.0.zip \
+rm -f field-inspector-v1.3.0.zip
+zip -r field-inspector-v1.3.0.zip \
   manifest.json background.js shared.js content.css content popup options \
   icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png
-unzip -l field-inspector-v1.10.0.zip   # confirm manifest.json is at the root
+unzip -l field-inspector-v1.3.0.zip   # confirm manifest.json is at the root
 ```
 
-> **Note:** `field-inspector-v1.3.0.zip` is stale — it is missing
-> `content/domain.js`, `content/domain-builder.js`, and `content/chatter.js`
-> even though this listing advertises the Domain Builder and Chatter
-> Manager. `field-inspector-v1.4.0.zip` is complete but predates
-> `shared.js`, `field-inspector-v1.5.0.zip` predates the version probe,
-> `field-inspector-v1.6.0.zip` predates the view-stack lookup, and
-> `field-inspector-v1.7.0.zip` predates button information, and
-> `field-inspector-v1.8.0.zip` predates the theming and settings page, and
-> `field-inspector-v1.9.0.zip` predates the full-page Settings tab; all
-> would fail review against this listing. Do not upload any of them.
-> They are kept only as historical artifacts; delete them once 1.10.0 is
-> published.
+> **Note:** There is only ever one ZIP in this repository. Older archives
+> built during development — each superseded as the Domain Builder, Chatter
+> Manager, `shared.js`, the version probe, the view stack, button
+> information, the theming and the full-page Settings tab landed — were
+> deleted rather than kept, and any surviving local copy of one must **not**
+> be uploaded: it would fail review against this listing. Rebuild with the
+> command above whenever any runtime file changes.
 
 ## Before you submit
 
