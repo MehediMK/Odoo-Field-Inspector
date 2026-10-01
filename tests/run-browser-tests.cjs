@@ -24,6 +24,7 @@ const FIXTURES = [
   ['settings-theme.html', '?debug=0'],
   ['options-page.html', ''],
   ['technical-tools.html', ''],
+  ['model-name.html', ''],
 ];
 
 const selected = process.argv[2];
@@ -41,7 +42,7 @@ for (const [fixture, query] of FIXTURES.filter(([name]) => !selected || name ===
       last = spawnSync(process.env.CHROME_BIN || 'google-chrome', [
         '--headless', '--no-sandbox', '--disable-gpu', '--disable-background-networking',
         '--allow-file-access-from-files', '--user-data-dir=' + profile,
-        '--virtual-time-budget=6000', '--dump-dom', pathToFileURL(resolve('tests', fixture)).href + query,
+        '--virtual-time-budget=' + (fixture === 'model-name.html' ? 15000 : 6000), '--dump-dom', pathToFileURL(resolve('tests', fixture)).href + query,
       ], { encoding: 'utf8', timeout: 30000 });
     } finally {
       rmSync(profile, { recursive: true, force: true });

@@ -13,6 +13,17 @@ show the field's real, authoritative definition.
 
 ## Record and model debugging tools
 
+While the inspector is enabled, the current technical model name is also shown
+beside Odoo's Actions controls in Form, List, Kanban, Calendar, Graph, Pivot and
+other views with a control panel. No field click or open inspector panel is
+needed, and the badge works independently of the metadata-mode toggle. Click the
+name to copy it. Navigation and control-panel re-renders refresh the name; wizards
+get their own badge. When Actions is unavailable, the badge sits beside the other
+view controls (or the wizard title). Unreadable context shows **Model unavailable**
+instead of keeping an old or guessed name. Disable Inspector removes the badges.
+Use **Auto-enable on this site** to restore them after page reloads. This feature
+reads page context only and makes no Odoo RPC calls.
+
 Enable the inspector and its **Odoo Developer Mode**, then inspect a field.
 The **Odoo Field** tab’s **Record Info** section has **Record Data**, **View XML**, **Access Rights**, and
 **Technical Shortcuts** buttons. The floating Options menu also offers

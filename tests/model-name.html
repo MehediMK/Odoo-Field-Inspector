@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{font:14px system-ui}.o_control_panel{display:flex;gap:8px;padding:10px}.o_cp_action_menus{display:flex}.modal-header{display:flex;gap:10px}input{height:20px}
+</style></head><body>
+<div class="o_action o_form_view" data-runtime-model="res.partner">
+  <div class="o_control_panel"><div class="o_cp_buttons"><button>New</button></div><div class="o_cp_action_menus"><button id="action">Actions</button></div></div>
+  <input name="name" value="Alice">
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+let receiver, copied='', probes=0, actionClicks=0, deferNext=false, release;
+window.chrome={runtime:{onMessage:{addListener(fn){receiver=fn;}},sendMessage(message){
+  if(message.type!=='FI_READ_CONTEXT')return Promise.resolve();
+  probes++;
+  const target=document.querySelector(message.selector);
+  const model=target?.closest('[data-runtime-model]')?.dataset.runtimeModel;
+  const response=model?{model,source:'Odoo runtime',verified:true}:null;
+  if(deferNext){deferNext=false;return new Promise(resolve=>release=()=>resolve(response));}
+  return Promise.resolve(response);
+}},storage:{local:{set:async()=>{},get:async()=>({})}}};
+window.fetch=()=>{throw Error('The model badge must not issue RPC requests');};
+document.querySelector('#action').onclick=()=>actionClicks++;
+</script>
+<script src="../shared.js"></script><script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/model-name.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[];const check=(value,name)=>{if(!value)throw Error(name);checks.push(name);};
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const message=(type,settings)=>receiver({type,settings},{},()=>{});
+const {ui,utils}=window.__FI__;utils.copyToClipboard=async text=>{copied=text;return true;};
+const root=document.querySelector('.o_action');
+const hosts=()=>[...document.querySelectorAll('[data-fi-model-name]')];
+const label=host=>host?.shadowRoot.querySelector('span').textContent;
+message('FI_ENABLE',{odooMode:false,highlight:false});await wait(800);
+check(hosts().length===1&&label(hosts()[0])==='res.partner','Model shown without field inspection or Odoo metadata mode');
+check(!ui.isPanelOpen(),'Inspector panel need not be open');
+check(document.querySelector('.o_cp_action_menus').nextElementSibling===hosts()[0],'Badge sits beside Actions');
+hosts()[0].shadowRoot.querySelector('button').click();await wait(10);
+check(copied==='res.partner','Badge copies exact technical model name');
+check(!ui.isPanelOpen(),'Copy does not open inspector');
+document.querySelector('#action').click();check(actionClicks===1,'Odoo action button remains functional');
+message('FI_ENABLE',{highlight:false});await wait(800);check(hosts().length===1,'Repeated enable does not duplicate badges');
+for(const [view,model] of [['list','sale.order'],['kanban','project.task'],['calendar','calendar.event'],['pivot','account.move']]){
+  root.className='o_action o_'+view+'_view';root.dataset.runtimeModel=model;await wait(800);
+  check(hosts().length===1&&label(hosts()[0])===model,view+' view updates without a field click');
+}
+const control=document.querySelector('.o_control_panel');control.innerHTML='<div class="o_cp_buttons"><button>New</button></div>';
+await wait(800);check(hosts().length===1&&hosts()[0].previousElementSibling.classList.contains('o_cp_buttons'),'Re-render restores badge beside available controls');
+const dialog=document.createElement('div');dialog.className='modal';dialog.setAttribute('role','dialog');dialog.dataset.runtimeModel='mail.compose.message';
+dialog.innerHTML='<header class="modal-header"><h3 class="modal-title">Compose</h3></header><div class="o_form_view"><input name="subject"></div>';
+document.body.append(dialog);await wait(800);
+check(hosts().length===2&&label(dialog.querySelector('[data-fi-model-name]'))==='mail.compose.message','Wizard has independent model badge');
+check(label(root.querySelector('[data-fi-model-name]'))==='account.move','Wizard does not overwrite main model');
+dialog.remove();await wait(800);check(hosts().length===1,'Closed wizard badge removed');
+// A URL switch must discard a pending response from the previous controller.
+deferNext=true;root.className='o_action o_graph_view';await wait(800);
+check(typeof release==='function','Context request is pending');
+location.hash='action=99';root.dataset.runtimeModel='stock.picking';release();await wait(800);
+check(label(hosts()[0])==='stock.picking','Late response from old route is discarded');
+// Missing context must not leave the previous model name behind.
+root.removeAttribute('data-runtime-model');root.className='o_action o_form_view';await wait(800);
+check(label(hosts()[0])==='Model unavailable'&&hosts()[0].shadowRoot.querySelector('button').disabled,'Unavailable context clears old name');
+message('FI_DISABLE');await wait(800);check(hosts().length===0,'Disable removes all badges');
+const count=probes;await wait(1600);check(probes===count,'Disable stops context polling');
+document.querySelector('#result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.querySelector('#result').textContent='FAIL: '+error.stack);
+</script></body></html>

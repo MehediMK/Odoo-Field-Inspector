@@ -130,6 +130,7 @@
   };
 
   function inPanel(e) {
+    if (window.__FI__.modelName?.ownsEvent(e)) return true;
     const path = typeof e.composedPath === "function" ? e.composedPath() : [];
     return !!(ui.hostEl && path.includes(ui.hostEl));
   }
@@ -350,12 +351,14 @@
     ui.applyTheme(state.settings);
     ui.showFinderButton();
     window.__FI__.chatter?.start();
+    window.__FI__.modelName?.start();
     logDebug("inspector enabled", { theme: state.settings.theme, accent: state.settings.accent, debug: state.debug });
     notifyBackground(true);
   }
 
   function disable(userInitiated = false) {
     state.enabled = false;
+    window.__FI__.modelName?.stop();
     window.__FI__.technical?.close();
     document.documentElement.removeAttribute("data-fi-active");
     detachListeners();
