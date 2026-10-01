@@ -1017,7 +1017,7 @@
   }
 
   /**
-   * Renders the Record Information tab — model, record ID, view type, and
+   * Renders the Record Information section — model, record ID, view type, and
    * action details (type, name, ID, XML ID, context, domain) extracted from
    * the current Odoo page context. Similar to Odoo Toolbox's Record
    * Information panel.
@@ -1142,16 +1142,6 @@
       tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
     }
 
-    // Record Information tab — added at the end so existing tab indices are
-    // preserved (the panel opens on tab 0 by default).
-    if (info.odooRecordInfo) {
-      tabs.push({
-        title: "Record Info",
-        icon: "structure",
-        html: renderRecordInfo(info),
-      });
-    }
-
     return tabs;
   }
 
@@ -1214,15 +1204,6 @@
     if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
     if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
 
-    // Record Information tab — added at the end so existing tab indices are preserved.
-    if (info.odooRecordInfo) {
-      tabs.push({
-        title: "Record Info",
-        icon: "structure",
-        html: renderRecordInfo(info),
-      });
-    }
-
     return tabs;
   }
 
@@ -1253,15 +1234,6 @@
     if (Object.keys(info.dataAttributes || {}).length) tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
     if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
     if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
-
-    // Record Information tab — added at the end so existing tab indices are preserved.
-    if (info.odooRecordInfo) {
-      tabs.push({
-        title: "Record Info",
-        icon: "structure",
-        html: renderRecordInfo(info),
-      });
-    }
 
     return tabs;
   }
@@ -1379,24 +1351,22 @@
       tabs.push({ title: "Odoo View", icon: "odoo", html: renderViewStackBlock(info) + renderViewAttrsBlock(info, "button") });
     }
 
-    // Record Information tab — added at the end so existing tab indices are preserved.
-    if (info.odooRecordInfo) {
-      tabs.push({
-        title: "Record Info",
-        icon: "structure",
-        html: renderRecordInfo(info),
-      });
-    }
-
     return tabs;
   }
 
   /** Dispatches to the right tab-array builder for the panel's kind. */
   function renderBody(info) {
-    if (info.kind === "list") return renderListInfo(info);
-    if (info.kind === "listCell") return renderDataCellInfo(info);
-    if (info.kind === "button") return renderButtonInfo(info);
-    return renderFormInfo(info);
+    const tabs = info.kind === "list" ? renderListInfo(info)
+      : info.kind === "listCell" ? renderDataCellInfo(info)
+      : info.kind === "button" ? renderButtonInfo(info)
+      : renderFormInfo(info);
+    if (info.odooRecordInfo) {
+      const recordSection = `<div class="fi-row-label" style="margin:14px 0 4px;">Record Info</div>` + renderRecordInfo(info);
+      const odooTab = tabs.find(tab => tab.title === "Odoo Field" || tab.title === "Odoo View");
+      if (odooTab) odooTab.html += recordSection;
+      else tabs.push({ title: "Odoo Field", icon: "odoo", html: recordSection });
+    }
+    return tabs;
   }
 
   function renderTabsBar(tabs, activeIndex) {

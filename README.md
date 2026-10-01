@@ -14,7 +14,7 @@ show the field's real, authoritative definition.
 ## Record and model debugging tools
 
 Enable the inspector and its **Odoo Developer Mode**, then inspect a field.
-The **Record Info** tab has **Record Data**, **View XML**, **Access Rights**, and
+The **Odoo Field** tab’s **Record Info** section has **Record Data**, **View XML**, **Access Rights**, and
 **Technical Shortcuts** buttons. The floating Options menu also offers
 **Record & Model Tools** and **Odoo Debug Mode**.
 
