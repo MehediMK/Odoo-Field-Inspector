@@ -104,7 +104,7 @@
 <div class="wrap">
   <p class="eyebrow"><a href="index.html">&larr; Odoo Field Inspector</a></p>
   <h1>Privacy Policy</h1>
-  <p class="effective">Effective date: 2026-09-25</p>
+  <p class="effective">Effective date: 2026-10-01</p>
 
   <p>This policy covers the "Odoo Field Inspector" Chrome extension ("the extension", "Field Inspector"). It's written to be read on its own — you don't need to read the source code to know what this extension does with your data, though the code is open for inspection in the <a href="https://github.com/MehediMK/Odoo-Field-Inspector">GitHub repository</a>.</p>
 
@@ -114,10 +114,10 @@
     <h2 style="margin-top:0;">Summary</h2>
     <ul>
       <li>The extension does <strong>not</strong> collect, store, or transmit your browsing activity, page content, field values, or any personal data, to us or to anyone else. We do not operate any server that the extension talks to, and the extension has no analytics, telemetry, or crash-reporting of any kind.</li>
-      <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name only</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
+      <li>The <strong>one exception</strong> is <strong>Odoo Developer Mode</strong>, an opt-in setting (on by default, toggle it off any time in the popup). When it's on and you click a field the extension recognizes as belonging to an Odoo form, list, or wizard, the extension sends that field's <strong>technical name and model name</strong> (e.g. <code>res.partner</code> / <code>email</code> — never the field's <em>value</em>) to the <strong>same Odoo server the page is already open on</strong>, using your existing logged-in session, to fetch that field's real definition. This request never goes to us or to any third party — it goes directly from your browser to the Odoo server you're already using.</li>
       <li>The same mode also reads <strong>one fixed configuration key</strong> (<code>web.base.build.description</code>, falling back to <code>web.base.build.version</code>) from that same server, <strong>at most once per tab</strong>, to learn your Odoo version. The key name is hard-coded in the extension and carries no information about you; the value (e.g. <code>17.0</code>) is only used to choose a link style and is shown in the panel. It is never stored and never sent anywhere else.</li>
       <li>Inspecting an <strong>Odoo button</strong> (in click-through mode, or by selecting it in the Field Finder) sends that button's model and its method or action name to the same server, to look the button's own declaration up in the view. Buttons are never intercepted on a normal click, so nothing is sent unless you deliberately inspect one. The button's label, the record it targets, and all record data stay in the page.</li>
-      <li>That same mode also reads <strong>view metadata</strong> for the field's model — the active view's record id, the <code>inherit_id</code> chain above it, and one batched <code>ir.model.data</code> lookup that turns those ids into XML IDs — so the panel can show which view file you are looking at and what it extends. These are view <em>identities and names only</em>: the extension never downloads a view's source XML (<code>arch_db</code>), and it reads no record data through them.</li>
+      <li>That same mode also reads <strong>view metadata</strong> for the field's model — the active view's record id, the <code>inherit_id</code> chain above it, and one batched <code>ir.model.data</code> lookup that turns those ids into XML IDs — so the panel can show which view file you are looking at and what it extends. The inspector reads metadata and merged XML. View XML additionally downloads source XML (<code>arch_db</code>) when you select a source view.</li>
       <li>In <strong>Domain Builder</strong>, clicking <strong>Load Fields</strong> with Odoo Developer Mode on sends the chosen model name to the same Odoo server to read field definitions. Domain conditions and values stay in tab memory and are copied to your clipboard only when you choose Copy; they are not sent to Odoo.</li>
       <li>Your only stored data is your own preference settings, plus — only if you use the per-site auto-enable option — the origin of each site you chose to remember. Both are kept locally in your browser via <code>chrome.storage.local</code>. We never see them; they never leave your machine.</li>
     </ul>
@@ -128,6 +128,7 @@
   <p>Values of <strong>password inputs, hidden token/CSRF fields, and other secret-named fields</strong> are replaced with a redaction marker before they can be shown or copied — in the panel, in Copy All, in JSON output, and in the Recent Fields history — unless you turn on <em>Show sensitive values</em>.</p>
   <p>By default, clicks on detected fields are stopped before they reach the page, so inspecting a form cannot change it. If you turn off <em>Intercept clicks</em> (click-through mode), your clicks reach the page normally and can change form data; the extension itself still never writes to a field and never submits anything.</p>
 
+  <p><strong>Record &amp; Model Tools:</strong> on demand, the extension reads saved record values, source XML, access rules, group names and technical records from the current Odoo server. Requests include model/record/view IDs and Odoo request context, such as language and allowed company IDs. Binary contents are omitted. Secret-named fields and nested JSON credentials are redacted by default. Tool results remain in tab memory and are cleared on close or settings changes. A read-only runtime probe relays current record context through the extension worker without storing it. Odoo Debug Mode changes the page URL and reloads it only when you apply the selected mode.</p>
   <h2>Data we collect</h2>
   <p><strong>None.</strong> We (the developer) do not operate a backend, collect analytics, or receive any data from installs of this extension. There is no telemetry, no crash reporting, no usage tracking, and no advertising in this extension.</p>
 
@@ -163,7 +164,7 @@
         <td>A model's view record id and its <code>inherit_id</code> ancestors (ids and internal names only)</td>
         <td>Only when Odoo Developer Mode is on <em>and</em> the clicked field is recognized as an Odoo field</td>
         <td>The <strong>same Odoo server</strong>, using your existing session</td>
-        <td>Show which XML ID the page is rendered from and what it inherits from. The extension reads view <em>metadata</em> only — it never downloads a view's full source XML (<code>arch_db</code>)</td>
+        <td>Show which XML ID the page is rendered from and what it inherits from. The inspector reads view metadata and merged XML; View XML loads source XML (<code>arch_db</code>) on demand</td>
       </tr>
       <tr>
         <td>The ids of those view records, looked up in <code>ir.model.data</code></td>
@@ -188,7 +189,7 @@
       </tr>
     </tbody>
   </table>
-  <p>No field <em>values</em> are ever included in the Odoo lookup — only the technical field name and the model name. No page content, browsing history, or personal information is ever transmitted by this extension, to us or to anyone else, under any setting.</p>
+  <p>Record and view requests include identifiers and Odoo context, which can contain defaults. The tools do not submit unsaved edits or execute create, write, delete, or server actions. Requests go only to the current Odoo server; nothing is sent to us or third-party services. Copies reach the clipboard only when you choose Copy.</p>
 
   <h2>Permissions and why we need them</h2>
   <table>

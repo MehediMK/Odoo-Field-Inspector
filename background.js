@@ -10,13 +10,13 @@
  *    chose to remember, so the inspector survives the navigation that would
  *    otherwise silently turn it off.
  *
- * This worker never reads page content and never talks to any external
- * server — it only injects the extension's own scripts, relays small status
- * messages for badge bookkeeping, and reads the user's own preference
- * storage.
+ * This worker injects extension scripts and relays a read-only MAIN-world
+ * Odoo context probe (model, record/view IDs and request context). It makes
+ * no network requests and does not persist page or record data.
  */
 
 importScripts("shared.js");
+importScripts("runtime.js");
 
 const { CONTENT_FILES, CONTENT_CSS, isRememberedOrigin, isInjectableUrl, isOriginGranted } = self.FI_SHARED;
 
@@ -43,9 +43,18 @@ function setBadge(tabId, enabled) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   try {
     if (!message || typeof message.type !== "string") return;
+
+    if (message.type === "FI_READ_CONTEXT" && sender.id === chrome.runtime.id && sender.tab &&
+        typeof message.selector === "string" && message.selector.length < 2000) {
+      chrome.scripting.executeScript({
+        target: { tabId: sender.tab.id, frameIds: [sender.frameId || 0] },
+        world: "MAIN", func: self.FI_READ_CONTEXT, args: [message.selector],
+      }).then(results => sendResponse(results[0]?.result || null), () => sendResponse(null));
+      return true;
+    }
 
     if (message.type === "FI_STATE_CHANGED" && sender.tab && typeof sender.tab.id === "number") {
       const tabId = sender.tab.id;

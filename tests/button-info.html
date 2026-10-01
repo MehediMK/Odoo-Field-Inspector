@@ -101,7 +101,7 @@ check(ui.lastInfo.odooViewAttrs.attrs.invisible==="state == 'done'",'invisible= 
 check(!btn('Save').hasAttribute('groups'),'The rendered button really does lack these attributes');
 check(tabs().includes('Odoo View'),'Panel has an Odoo View tab for the button');
 check(openTab('Odoo View'),'The Odoo View tab can be opened');
-check(body().includes('Declared In Current View'),'Panel labels the declared-in-view block');
+check(body().includes('Declared In Default View'),'Panel labels the declared-in-view block');
 check(body().includes('base.view_partner_form'),'Panel shows the view XML ID the button belongs to');
 check(body().includes('base.group_user'),'Panel renders the groups attribute');
 openTab('Button');

@@ -217,7 +217,7 @@ These screenshots show the actual inspection panel rendered on a labeled sample 
 - [ ] Set the intended release version in `manifest.json`.
 - [ ] Use a higher version for an update to an existing release.
 - [ ] Create a clean staging folder containing only runtime files.
-- [ ] Include `manifest.json`, `background.js`, `shared.js`, `content.css`, `content/`, `popup/`, `options/`, and `icons/` for this project. (`shared.js` is runtime code — omitting it breaks the popup and the service worker; `options/` is runtime code — the manifest's `options_ui` points at `options/options.html`, so omitting it breaks the settings tab and the popup's All settings button.)
+- [ ] Include `manifest.json`, `background.js`, `shared.js`, `runtime.js`, `content.css`, `content/`, `popup/`, `options/`, and `icons/` for this project. (`shared.js` is runtime code — omitting it breaks the popup and the service worker; `options/` is runtime code — the manifest's `options_ui` points at `options/options.html`, so omitting it breaks the settings tab and the popup's All settings button.)
 - [ ] Exclude `store-assets/`, documentation, tests, local profiles, secrets, and temporary files.
 - [ ] Verify all paths referenced by the manifest and code exist in staging.
 - [ ] Load and test the staged extension in Chrome.

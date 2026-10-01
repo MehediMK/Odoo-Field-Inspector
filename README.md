@@ -11,6 +11,63 @@ recognized as belonging to an Odoo form/wizard and the extension calls
 back into that same Odoo server (using your already-logged-in session) to
 show the field's real, authoritative definition.
 
+## Record and model debugging tools
+
+Enable the inspector and its **Odoo Developer Mode**, then inspect a field.
+The **Record Info** tab has **Record Data**, **View XML**, **Access Rights**, and
+**Technical Shortcuts** buttons. The floating Options menu also offers
+**Record & Model Tools** and **Odoo Debug Mode**.
+
+- **Record context:** a read-only MAIN-world probe reads the containing OWL
+  record/controller when available. Scoped DOM and URL fallbacks are labelled;
+  a network-only model guess cannot authorize a record-data read. New/unsaved
+  records have no saved data to load. Late responses cannot replace a newer
+  inspection. No additional Chrome permission is required.
+- **Record Data:** searchable table/JSON of server-saved values, with JSON copy.
+  Unsaved edits are not included. Binary contents are omitted. Secret-named
+  fields are excluded by default and nested JSON credentials are redacted.
+  Closing tools, disabling the inspector, or changing settings clears the viewer.
+- **Advanced fields:** dependencies, modules, indexing, copy/translation flags,
+  inverse field, deletion policy, groups, domain and size, when the server exposes
+  those metadata fields.
+- **View XML:** merged XML using the detected view ID and record context, source
+  XML on demand, inherited-view names/XML IDs, search, and copy. If the active view
+  ID cannot be read, the default-view fallback is explicitly labelled. Descendants
+  include inactive views and are not proof of which views contributed to rendering.
+  The browser lists at most 200 source views and traverses at most 12 levels.
+- **Access Rights:** model ACLs, record rules, group names and domains. These are
+  readable configuration records, not an effective-permissions calculation. Server
+  permission errors are displayed; a unified `ir.access` fallback is attempted
+  when both older access models are unavailable.
+- **Finder:** Required, Readonly, Relational and Buttons filters based on rendered
+  state; Arrow Up/Down navigation and Enter selection. Result counts disclose the
+  200-result display limit.
+- **Technical shortcuts:** matching Fields, Views, Access Rights, Record Rules,
+  Server Actions and the Current Action, with links to open records in a new tab.
+  Server actions are never executed by these tools.
+- **Odoo Debug Mode:** Off, Developer, or Assets, applied explicitly with a page
+  reload. Other URL parameters and navigation state are preserved. This controls
+  Odoo's URL debug mode, separately from the inspector's metadata setting.
+  See [Odoo's developer-mode documentation](https://www.odoo.com/documentation/16.0/applications/general/developer_mode.html).
+
+Use **Refresh** inside the tools to resolve the current context again and clear
+cached view XML. The tools use your existing Odoo account permissions and make
+read-only RPC calls to the current origin. Custom OWL runtimes and installations
+that hide runtime state may need Odoo debug mode; fallback status remains visible.
+
+Additional implementation files: `runtime.js` (service-worker MAIN-world probe)
+and `content/technical.js` (on-demand tools UI). Include both when packaging.
+
+Validation:
+
+```sh
+node --test tests/domain.test.cjs tests/shared.test.cjs tests/technical.test.cjs
+node tests/run-browser-tests.cjs
+```
+
+The browser tests use mocked Odoo responses; they do not certify a live server or
+all Odoo versions.
+
 ## Features
 
 - **Form View** — click a `<label>`, `<input>`, `<select>`, `<textarea>`,
@@ -424,21 +481,17 @@ classes alone. It has its own toggle in the popup ("Odoo Developer Mode"),
 separate from the general Enable Inspector switch — turn it off and every
 Odoo-specific lookup below is skipped entirely, with no network activity.
 
-- **Model detection** (`content/odoo.js`): a content script's isolated
-  world can't read the page's own JS state, and the URL doesn't help
-  either — opening a wizard never changes it. Instead, every Odoo RPC call
-  (on any version since Odoo 8) POSTs to `/web/dataset/call_kw/<model>/
-  <method>`, which the browser's own Resource Timing API can see with no
-  extra permission. The model behind the most recent `get_views`/
-  `onchange`/`web_read`/`web_save`/`web_search_read` call is used —
-  incidental relational lookups like a many2one's `name_search` are
-  ignored so they can't hijack the detected model.
+- **Model detection** (`content/odoo.js`, `runtime.js`): a service-worker-mediated
+  MAIN-world probe reads the containing OWL record/controller without changing it.
+  Scoped DOM and URL fallbacks remain available. Resource Timing is a labelled
+  heuristic only, with inspector-generated requests excluded. A wizard with no
+  readable context does not inherit its background page's record identity.
 - **Field lookup**: an `ir.model.fields.search_read` call
   (`{model, name} → field_description, ttype, relation, required,
   readonly, store, related, compute, help, selection`) resolved against
   that model + the field's technical name (read off Odoo's own
   `.o_field_widget[name="..."]` wrapper, or a list view's `<td name="...">`
-  / `<th data-name="...">`). Results are cached per (model, field) for the
+  / `<th data-name="...">`). Results are cached per (model, field, context) for the
   life of the page. A direct **"Open in Odoo"** link to the field's own
   `ir.model.fields` record (Settings → Technical → Fields) is included.
 - **Server version, and version-correct deep links**: one
@@ -459,21 +512,21 @@ Odoo-specific lookup below is skipped entirely, with no network activity.
   - Copy All and Copy Tab use the same version-gated link as the panel, so
     pasted text doesn't rot on a newer server.
 - **Declared-in-this-view attributes**: a second, independent lookup
-  (`get_views` on the model, fetching the default **form** or **list** arch to
-  match what you clicked) finds how the field is actually declared in that view
+  (`get_views` on the model, using the detected view ID and context, or an explicitly labelled default
+  **form** or **list** view fallback) finds how the field is actually declared in that view
   — `widget=`, `domain=`, `context=`, `invisible=`, `required=`, `readonly=`,
   `options=`, `groups=` — the overrides `ir.model.fields` alone can't show,
   since that's only the model-level definition. When a field appears more than
   once in the arch (e.g. it's also a column in an embedded one2many
   sub-view), the least-nested match is preferred, since a deeply-nested one is
   more likely to belong to the sub-view than the field actually clicked.
-  Odoo renamed the list view type from `tree` to `list` in 17, so the type is
-  retried under both names — a pre-17 server answers the `tree` request.
+  The list view type is retried as both `list` and `tree` for version compatibility.
 - **View XML IDs and the inheritance chain**: the **View Stack** block answers
   "which XML ID am I actually looking at, and what does it inherit from?" — the
   question a rendered page cannot answer on its own, because what you see is
   the *merge* of a whole view stack:
-  - the active view's record id comes from the same `get_views` response;
+  - the selected view's record ID comes from the same `get_views` response;
+    when runtime view ID is unavailable, the panel labels this as the default view;
   - `ir.ui.view.inherit_id` is walked upward, so every ancestor is listed by
     its own external ID — e.g. your `my_addon.view_partner_form_inherit` on
     top of `base.view_partner_form`, which is exactly what you need when a
@@ -489,8 +542,8 @@ Odoo-specific lookup below is skipped entirely, with no network activity.
   - a view created in the UI rather than in a data file has no external ID at
     all — that's shown as "no external ID" instead of being hidden.
   - It deliberately does **not** download every ancestor's `arch_db`: a view
-    arch can be hundreds of KB. The panel therefore names the views that
-    contributed and says so, rather than pretending to attribute one field
+    arch can be hundreds of KB. The panel lists the selected view and its ancestors, which is not a complete
+    list of contributing extension views. It does not attribute one field
     node to one XML file.
 - **Button information** (Odoo Developer Mode on, button inspected): a button
   has no `ir.model.fields` row, so no field lookup is made at all. Instead the

@@ -156,8 +156,8 @@ check(typesAsked().length===2,'The failed list request and the tree retry are ea
 check(stack()[0].xmlId==='sale.view_order_tree','Falls back to the tree view on a pre-17 server');
 check(stack().requestedType==='tree','The fallback type is reported, not hidden');
 check(ui.lastInfo.odooViewAttrs.attrs.widget==='tree_only','List column attributes come from the list arch, not the form arch');
-check(body().includes('Declared In Current View (list)'),'Label says list, not form');
-check(ui.buildCopyAllText(ui.lastInfo,'text').includes('Declared In Current View (list)'),'Copy-all text labels the view type too');
+check(body().includes('Declared In Default View (list)'),'Label says list, not form');
+check(ui.buildCopyAllText(ui.lastInfo,'text').includes('Declared In Default View (list)'),'Copy-all text labels the view type too');
 
 // --- same model, form view: still reads the form arch ---
 press(email);await settle();

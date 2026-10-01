@@ -388,7 +388,7 @@ file listed in `shared.js`'s `CONTENT_FILES`/`CONTENT_CSS` is present in the
 ZIP, `options/options.html` is present (the manifest points at it and a
 missing file would break the settings tab on first open), and every packaged
 file is byte-identical to its source. It contains only the runtime files:
-`manifest.json`, `background.js`, `shared.js`, `content.css`, `content/`,
+`manifest.json`, `background.js`, `shared.js`, `runtime.js`, `content.css`, `content/`,
 `popup/`, `options/`, and `icons/*.png`. `README.md`, `PRIVACY_POLICY.md`,
 `STORE_LISTING.md`, `CHECKLIST_README.md`, `tests/`, `docs/`,
 `icons/icon.svg`, and `promo/` are dev-only and intentionally excluded.
@@ -407,7 +407,7 @@ Rebuild it from the repo root with an explicit file list (never a broad
 ```sh
 rm -f field-inspector-v1.3.0.zip
 zip -r field-inspector-v1.3.0.zip \
-  manifest.json background.js shared.js content.css content popup options \
+  manifest.json background.js shared.js runtime.js content.css content popup options \
   icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png
 unzip -l field-inspector-v1.3.0.zip   # confirm manifest.json is at the root
 ```

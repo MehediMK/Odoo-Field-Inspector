@@ -22,7 +22,8 @@ window.fetch=async(url,options)=>{
   const result=(()=>{
     if(key==='ir.model.fields.search_read')return [{id:42,field_description:'Email',ttype:'char',required:false,readonly:false,store:true}];
     if(key==='ir.config_parameter.get_param'){
-      const param=body.params.args[0][0];
+      const param=body.params.args[0];
+      if(typeof param!=='string') throw Error('get_param expects a string key');
       if(param==='web.base.build.description')return versionResolves?versionValue:null;
       if(param==='web.base.build.version')return '16.0';
       return null;

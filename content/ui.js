@@ -313,6 +313,8 @@
       } else if (action === "highlight" || action === "odooMode" || action === "showSensitiveValues" || action === "interceptClicks") {
         if (ui.onOptionSetting) ui.onOptionSetting(action, !ui.settingsRef[action]);
       } else if (action === "copy") ui.copyAll(ui.panelEl.querySelector("#fi-copy-all-btn"));
+      else if (action === "tools") window.__FI__.technical?.open('record');
+      else if (action === "debug") window.__FI__.technical?.open('debug');
       else if (action === "settings") ui.openSettings();
       else if (action === "disable" && ui.onDisable) ui.onDisable();
     });
@@ -328,7 +330,10 @@
       <div class="fi-finder-search-wrap">
         <input type="text" class="fi-finder-search" id="fi-finder-search" placeholder="Search by label or technical name…" autocomplete="off" spellcheck="false" />
       </div>
-      <div class="fi-finder-count" id="fi-finder-count"></div>
+      <div class="fi-finder-search-wrap"><label>Filter <select id="fi-finder-filter" aria-label="Filter fields">
+        <option value="all">All</option><option value="required">Required</option><option value="readonly">Readonly</option><option value="relational">Relational</option><option value="buttons">Buttons</option>
+      </select></label><small> Filters reflect rendered field state.</small></div>
+      <div class="fi-finder-count" id="fi-finder-count" aria-live="polite"></div>
       <div class="fi-finder-results" id="fi-finder-results"></div>
     `;
     shadow.appendChild(finderPanel);
@@ -357,6 +362,20 @@
     finderBtn.addEventListener("click", () => (ui.isOptionsOpen() ? ui.closeOptions() : ui.openOptions()));
     finderPanel.querySelector("#fi-finder-close-btn").addEventListener("click", () => ui.closeFinder());
     finderPanel.querySelector("#fi-finder-search").addEventListener("input", (e) => renderFinderResults(e.target.value));
+    finderPanel.querySelector('#fi-finder-filter').addEventListener('change', () => renderFinderResults(finderPanel.querySelector('#fi-finder-search').value));
+    finderPanel.addEventListener('keydown', event => {
+      if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key) || event.target.tagName === 'SELECT') return;
+      const buttons = [...finderPanel.querySelectorAll('.fi-finder-result')];
+      if (!buttons.length) return;
+      const index = buttons.indexOf(shadow.activeElement);
+      if (event.key === 'Enter') {
+        if (event.target.id === 'fi-finder-search') { event.preventDefault(); buttons[0].click(); }
+        return;
+      }
+      event.preventDefault();
+      const next = event.key === 'ArrowDown' ? (index + 1) % buttons.length : (index <= 0 ? buttons.length - 1 : index - 1);
+      buttons[next].focus(); buttons[next].scrollIntoView({ block: 'nearest' });
+    });
     settingsPanel.querySelector("#fi-settings-close-btn").addEventListener("click", () => ui.closeSettings(true));
     settingsPanel.querySelector("#fi-settings-body").addEventListener("click", (e) => {
       const control = e.target.closest("[data-setting]");
@@ -372,6 +391,8 @@
 
     shadow.addEventListener("click", (e) => {
       if (!optionsPanel.contains(e.target) && !finderBtn.contains(e.target)) ui.closeOptions();
+      const tool = e.target.closest('[data-tool]');
+      if (tool && !tool.disabled) { window.__FI__.technical?.open(tool.dataset.tool); return; }
       const finderResult = e.target.closest(".fi-finder-result");
       if (finderResult) {
         const idx = Number(finderResult.getAttribute("data-idx"));
@@ -385,7 +406,7 @@
         ui.copySingle(tabCopyBtn, body ? extractTabText(body) : "");
         return;
       }
-      const copyBtn = e.target.closest(".fi-copy-btn");
+      const copyBtn = e.target.closest(".fi-copy-btn[data-copy-value]");
       if (copyBtn) {
         const text = copyBtn.getAttribute("data-copy-value") || "";
         ui.copySingle(copyBtn, text);
@@ -439,15 +460,26 @@
     const q = String(query || "")
       .trim()
       .toLowerCase();
+    const filter = ui.finderPanelEl.querySelector('#fi-finder-filter')?.value || 'all';
     const matches = ui.finderFields.filter((f, i) => {
       f.__idx = i; // stable index into ui.finderFields for the click handler
+      if (filter === 'buttons' && f.kind !== 'button') return false;
+      if (filter !== 'all' && filter !== 'buttons') {
+        if (f.kind === 'button') return false;
+        const el = f.el;
+        const control = el.matches('input,textarea,select') ? el : el.querySelector('input,textarea,select');
+        const required = control?.required || el.matches('.o_required_modifier,[aria-required="true"]') || !!el.querySelector('[aria-required="true"]');
+        const readonly = control?.readOnly || el.matches('.o_readonly_modifier,[aria-readonly="true"]') || (el.matches('.o_field_widget') && !control);
+        const relational = /(?:many2one|one2many|many2many)/.test(el.className + ' ' + (el.getAttribute('data-type') || ''));
+        if (filter === 'required' && !required || filter === 'readonly' && !readonly || filter === 'relational' && !relational) return false;
+      }
       if (!q) return true;
       return (f.label && f.label.toLowerCase().includes(q)) || (f.technicalName && f.technicalName.toLowerCase().includes(q));
     });
 
     if (countEl) {
       countEl.textContent = ui.finderFields.length
-        ? `${matches.length} of ${ui.finderFields.length} field${ui.finderFields.length === 1 ? "" : "s"}`
+        ? `${matches.length} of ${ui.finderFields.length} fields${matches.length > 200 ? " · showing first 200; refine your search" : ""}`
         : "No fields detected on this page yet.";
     }
 
@@ -500,6 +532,8 @@
         ).join("")
       : `<button type="button" class="fi-option" data-option="search">Search Fields</button>
         <button type="button" class="fi-option" data-option="domain">Domain Builder</button>
+        <button type="button" class="fi-option" data-option="tools">Record &amp; Model Tools</button>
+        <button type="button" class="fi-option" data-option="debug">Odoo Debug Mode</button>
         ${hasChatter ? '<button type="button" class="fi-option" data-option="chatter">Chatter Manager</button>' : ""}
         <button type="button" class="fi-option" data-option="recent" ${ui.history.length ? "" : "disabled"}>Recent Fields</button>
         <button type="button" class="fi-option" data-option="highlight" aria-pressed="${!!ui.settingsRef.highlight}">Highlight Fields · ${ui.settingsRef.highlight ? "On" : "Off"}</button>
@@ -811,7 +845,7 @@
         body += `<div class="fi-empty-hint" style="padding:4px 0;">Appears ${va.occurrences} times in this view — showing the least-nested match.</div>`;
       }
     }
-    return `<div class="fi-row-label" style="margin:10px 0 2px;">Declared In Current View (${typeLabel})</div>${body}`;
+    return `<div class="fi-row-label" style="margin:10px 0 2px;">${info.odooRecordInfo?.viewId ? "Declared In Active View" : "Declared In Default View"} (${typeLabel})</div>${body}`;
   }
 
   /**
@@ -850,7 +884,7 @@
     const active = stack[0];
     const ancestors = stack.slice(1);
     const rows = [
-      row("Active View XML ID", xmlIdCell(active) + openLink(active), { html: true }),
+      row(info.odooRecordInfo?.viewId ? "Active View XML ID" : "Default View XML ID", xmlIdCell(active) + openLink(active), { html: true }),
       row("View Name", active.name || "—"),
       row("View Type", stack.requestedType || (info.odooViewType === "list" ? "list" : "form"), { mono: true }),
       row("Model", active.model || info.odooModel || "—", { mono: true }),
@@ -872,13 +906,13 @@
     }
 
     html +=
-      `<div class="fi-empty-hint" style="padding:6px 0 0;">The arch Odoo rendered is the merge of this whole stack, so a field's effective definition can combine several of these XML IDs. Ancestor archs are not downloaded to keep this fast.</div>`;
+      `<div class="fi-empty-hint" style="padding:6px 0 0;">This shows the selected view and its ancestors. Other extension views can also contribute to the merged XML; use View XML to explore descendants.</div>`;
 
     if (stack.partial) {
       html += `<div class="fi-empty-hint" style="padding:4px 0 0;">Chain is incomplete: ${escapeHtml(stack.partial)}</div>`;
     }
 
-    return `<div class="fi-row-label" style="margin:10px 0 2px;">View Stack</div>${html}`;
+    return `<div class="fi-row-label" style="margin:10px 0 2px;">View Stack</div>${!info.odooRecordInfo?.viewId ? '<div class="fi-empty-hint">Default view lookup — active view ID unavailable.</div>' : ''}${html}`;
   }
 
   /** "17.0" / "saas~17.2" once read; an explicit state before that, never a silent blank. */
@@ -947,6 +981,9 @@
       if (meta.related) rows.push(row("Related Path", meta.related, { mono: true }));
       if (meta.compute) rows.push(row("Computed", "Yes", { pill: true }));
       if (meta.help) rows.push(row("Help Text", meta.help));
+      for (const [name, label] of Object.entries({ depends: 'Dependencies', modules: 'Modules', index: 'Indexed', copied: 'Copied', translate: 'Translatable', relation_field: 'Inverse Field', on_delete: 'On Delete', groups: 'Field Groups', domain: 'Domain', size: 'Size' })) {
+        if (meta[name] !== undefined) rows.push(row(label, typeof meta[name] === 'boolean' ? (meta[name] ? 'Yes' : 'No') : typeof meta[name] === 'object' ? JSON.stringify(meta[name]) : String(meta[name]), { mono: true }));
+      }
 
       if (meta.id != null) {
         rows.push(row("Field Record", renderFieldRecordLink(meta.id, info.odooServerVersion), { html: true }));
@@ -977,6 +1014,72 @@
     return `<div class="fi-row-label" style="margin:10px 0 2px;">CSS Selector</div>${copyableBlock(
       info.cssSelector
     )}<div class="fi-row-label" style="margin:8px 0 2px;">${xpathLabel}</div>${copyableBlock(info.xpath)}${hint}`;
+  }
+
+  /**
+   * Renders the Record Information tab — model, record ID, view type, and
+   * action details (type, name, ID, XML ID, context, domain) extracted from
+   * the current Odoo page context. Similar to Odoo Toolbox's Record
+   * Information panel.
+   *
+   * The data comes from odoo.detectRecordInfo() and is merged into the info
+   * object by content.js before the panel is rendered.
+   */
+  function renderRecordInfo(info) {
+    if (!info.odooRecordInfo) {
+      return `<div class="fi-empty-hint" style="padding:4px 0;">Turn on Odoo Developer Mode to see record information (model, record ID, view type, action details).</div>`;
+    }
+
+    const ri = info.odooRecordInfo;
+
+    const rows = [];
+    if (ri.source) rows.push(row('Context Source', ri.source));
+    rows.push(row('Active View ID', ri.viewId || 'Unavailable — view lookups use the default view'));
+    if (ri.model) rows.push(row("Model", ri.model, { mono: true }));
+    if (ri.recordId) rows.push(row("Record ID", ri.recordId, { mono: true }));
+    if (ri.viewType) rows.push(row("View Type", ri.viewType, { mono: true }));
+
+    // Action details section
+    const actionRows = [];
+    if (ri.actionType) actionRows.push(row("Action Type", ri.actionType, { mono: true }));
+    if (ri.actionName) actionRows.push(row("Action Name", ri.actionName));
+    if (ri.actionId) actionRows.push(row("Action ID", ri.actionId, { mono: true }));
+    if (ri.actionXmlId) actionRows.push(row("Action XML ID", ri.actionXmlId, { mono: true }));
+    if (ri.actionContext) actionRows.push(row("Action Context", ri.actionContext, { mono: true }));
+    if (ri.actionDomain) actionRows.push(row("Action Domain", ri.actionDomain, { mono: true }));
+
+    // Open record deep link (if model + recordId are available)
+    let deepLinkHtml = "";
+    if (ri.model && ri.recordId && ui.settingsRef && ui.settingsRef.odooMode) {
+      const odoo = window.__FI__.odoo;
+      if (odoo) {
+        const url = odoo.recordUrl(ri.model, ri.recordId);
+        deepLinkHtml = `<div class="fi-row-label" style="margin:10px 0 4px;">Open Record</div><div class="fi-copyable"><code>${escapeHtml(url)}</code><button type="button" class="fi-copy-btn" data-copy-value="${escapeHtml(url)}" title="Copy">📋</button></div>`;
+      }
+    }
+
+    let html = "";
+    if (rows.length) {
+      html += table(rows.join(""));
+    } else {
+      html += `<div class="fi-empty-hint" style="padding:4px 0;">No record information detected on this page.</div>`;
+    }
+
+    if (actionRows.length) {
+      html += `<div class="fi-row-label" style="margin:10px 0 2px;">Action</div>${table(actionRows.join(""))}`;
+    }
+
+    if (deepLinkHtml) {
+      html += deepLinkHtml;
+    }
+
+    if (ui.settingsRef.odooMode && ri.model) html += `<div class="fi-tool-actions">
+      <button class="fi-copy-btn" data-tool="record" ${ri.recordId ? '' : 'disabled'}>Record Data</button>
+      <button class="fi-copy-btn" data-tool="views">View XML</button>
+      <button class="fi-copy-btn" data-tool="access">Access Rights</button>
+      <button class="fi-copy-btn" data-tool="shortcuts">Technical Shortcuts</button>
+    </div>`;
+    return html;
   }
 
   /** Builds the ordered list of { title, html } tabs for a Form Field panel. */
@@ -1037,6 +1140,16 @@
     }
     if (Object.keys(info.otherAttributes || {}).length) {
       tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
+    }
+
+    // Record Information tab — added at the end so existing tab indices are
+    // preserved (the panel opens on tab 0 by default).
+    if (info.odooRecordInfo) {
+      tabs.push({
+        title: "Record Info",
+        icon: "structure",
+        html: renderRecordInfo(info),
+      });
     }
 
     return tabs;
@@ -1101,6 +1214,15 @@
     if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
     if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
 
+    // Record Information tab — added at the end so existing tab indices are preserved.
+    if (info.odooRecordInfo) {
+      tabs.push({
+        title: "Record Info",
+        icon: "structure",
+        html: renderRecordInfo(info),
+      });
+    }
+
     return tabs;
   }
 
@@ -1131,6 +1253,15 @@
     if (Object.keys(info.dataAttributes || {}).length) tabs.push({ title: "Data Attrs", icon: "data", html: attrList(info.dataAttributes) });
     if (Object.keys(info.ariaAttributes || {}).length) tabs.push({ title: "ARIA Attrs", icon: "aria", html: attrList(info.ariaAttributes) });
     if (Object.keys(info.otherAttributes || {}).length) tabs.push({ title: "Other Attrs", icon: "other", html: attrList(info.otherAttributes) });
+
+    // Record Information tab — added at the end so existing tab indices are preserved.
+    if (info.odooRecordInfo) {
+      tabs.push({
+        title: "Record Info",
+        icon: "structure",
+        html: renderRecordInfo(info),
+      });
+    }
 
     return tabs;
   }
@@ -1248,6 +1379,15 @@
       tabs.push({ title: "Odoo View", icon: "odoo", html: renderViewStackBlock(info) + renderViewAttrsBlock(info, "button") });
     }
 
+    // Record Information tab — added at the end so existing tab indices are preserved.
+    if (info.odooRecordInfo) {
+      tabs.push({
+        title: "Record Info",
+        icon: "structure",
+        html: renderRecordInfo(info),
+      });
+    }
+
     return tabs;
   }
 
@@ -1324,6 +1464,7 @@
 
   ui.showPanel = function (info, settings, el, opts = {}) {
     try {
+      window.__FI__.technical?.close();
       ui.ensureHost();
       ui.lastInfo = info;
       ui.lastElement = el || null;
@@ -1356,12 +1497,17 @@
   };
 
   /** Call once right after showPanel to get a token for an async Odoo lookup tied to the field now showing. */
+  ui.isCurrentLookup = (requestId, info) => requestId === odooRequestSeq && ui.lastInfo === info && !ui.panelEl?.hidden;
+  ui.refreshPanel = function (info) {
+    if (ui.lastInfo === info && ui.bodyEl) renderPanelBody(info);
+  };
+
   ui.beginOdooLookup = function () {
     return odooRequestSeq;
   };
 
   function canHaveOdooLookup(info) {
-    return !!info && (info.kind === "form" || info.kind === "listCell" || info.kind === "button");
+    return !!info && (info.kind === "form" || info.kind === "list" || info.kind === "listCell" || info.kind === "button");
   }
 
   /** Applies a live Odoo field-metadata result, but only if it's still for the field currently on screen. */
@@ -1404,6 +1550,7 @@
   };
 
   ui.closePanel = function () {
+    odooRequestSeq += 1;
     if (ui.panelEl) ui.panelEl.hidden = true;
     ui.lastInfo = null;
   };
@@ -1456,6 +1603,9 @@
       if (meta.related) lines.push(`Related Path: ${meta.related}`);
       if (meta.compute) lines.push(`Computed: Yes`);
       if (meta.help) lines.push(`Help Text: ${meta.help}`);
+      for (const name of ['depends','modules','index','copied','translate','relation_field','on_delete','groups','domain','size']) {
+        if (meta[name] !== undefined) lines.push(`${name}: ${typeof meta[name] === 'object' ? JSON.stringify(meta[name]) : meta[name]}`);
+      }
       if (meta.id != null) {
         const odoo = window.__FI__.odoo;
         const link = odoo ? odoo.fieldRecordLink(meta.id, info.odooServerVersion) : null;
@@ -1495,11 +1645,32 @@
 
     const va = info.odooViewAttrs;
     if (va && !va.error && va.attrs && Object.keys(va.attrs).length) {
-      lines.push(`Declared In Current View (${info.odooViewType === "list" ? "list" : "form"}): ${JSON.stringify(va.attrs)}`);
+      lines.push(`${info.odooRecordInfo?.viewId ? "Declared In Active View" : "Declared In Default View"} (${info.odooViewType === "list" ? "list" : "form"}): ${JSON.stringify(va.attrs)}`);
     }
 
     lines.push(`View XML Snippet: <field name="${info.odooFieldName}"/>`);
     lines.push(`---`);
+    return lines;
+  }
+
+  /**
+   * Builds a record information text block for the copy-all output.
+   */
+  function buildRecordInfoTextBlock(info) {
+    const lines = [];
+    if (!info.odooRecordInfo) return lines;
+    const ri = info.odooRecordInfo;
+    lines.push("");
+    lines.push(`— Record Information —`);
+    if (ri.model) lines.push(`Model: ${ri.model}`);
+    if (ri.recordId) lines.push(`Record ID: ${ri.recordId}`);
+    if (ri.viewType) lines.push(`View Type: ${ri.viewType}`);
+    if (ri.actionType) lines.push(`Action Type: ${ri.actionType}`);
+    if (ri.actionName) lines.push(`Action Name: ${ri.actionName}`);
+    if (ri.actionId) lines.push(`Action ID: ${ri.actionId}`);
+    if (ri.actionXmlId) lines.push(`Action XML ID: ${ri.actionXmlId}`);
+    if (ri.actionContext) lines.push(`Action Context: ${ri.actionContext}`);
+    if (ri.actionDomain) lines.push(`Action Domain: ${ri.actionDomain}`);
     return lines;
   }
 
@@ -1546,6 +1717,7 @@
         lines.push(`Other Attributes: ${JSON.stringify(info.otherAttributes)}`);
       }
       lines.push(`HTML: ${info.htmlPreview}`);
+      lines.push(...buildRecordInfoTextBlock(info));
     } else if (info.kind === "listCell") {
       lines.push(`Field Inspector — List Cell`);
       lines.push(...buildOdooTextBlock(info));
@@ -1568,6 +1740,7 @@
         lines.push(`Other Attributes: ${JSON.stringify(info.otherAttributes)}`);
       }
       lines.push(`HTML: ${info.htmlPreview}`);
+      lines.push(...buildRecordInfoTextBlock(info));
     } else if (info.kind === "button") {
       const buttonType = buttonAttr(info, "type");
       const special = buttonAttr(info, "special");
@@ -1600,9 +1773,10 @@
       }
       const va = info.odooViewAttrs;
       if (va && !va.error && va.attrs && Object.keys(va.attrs).length) {
-        lines.push(`Declared In Current View: ${JSON.stringify(va.attrs)}`);
+        lines.push(`${info.odooRecordInfo?.viewId ? "Declared In Active View" : "Declared In Default View"}: ${JSON.stringify(va.attrs)}`);
       }
       lines.push(`HTML: ${info.htmlPreview}`);
+      lines.push(...buildRecordInfoTextBlock(info));
     } else {
       lines.push(`Field Inspector — List Column`);
       lines.push(`Column Name: ${info.columnName}`);
@@ -1628,6 +1802,7 @@
         lines.push(`ARIA Attributes: ${JSON.stringify(info.ariaAttributes)}`);
       }
       lines.push(`HTML: ${info.htmlPreview}`);
+      lines.push(...buildRecordInfoTextBlock(info));
     }
     return lines.join("\n");
   };

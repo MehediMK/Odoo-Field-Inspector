@@ -38,6 +38,7 @@
     "content/domain.js",
     "content/domain-builder.js",
     "content/chatter.js",
+    "content/technical.js",
     "content/content.js",
   ];
 

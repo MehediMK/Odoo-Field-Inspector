@@ -174,54 +174,43 @@
     });
 
     const odoo = window.__FI__.odoo;
-    const canLookUpOdoo =
-      state.settings.odooMode && odoo && (info.kind === "button" || ((info.odooFieldName) && (info.kind === "form" || info.kind === "listCell")));
-    if (canLookUpOdoo) {
-      info.odooModel = odoo.detectCurrentModel();
-    }
-    logDebug("odoo lookup", { model: info.odooModel || "(none)", requested: !!canLookUpOdoo });
-
+    if (state.settings.odooMode && odoo) info.odooRecordInfo = odoo.detectRecordInfo(resolved.el);
     ui.showPanel(info, state.settings, resolved.el);
-
-    // Live Odoo field definition lookup: runs after the panel is already
-    // showing (synchronous DOM-derived info first, network second) and is
-    // race-guarded against the user clicking a different field before the
-    // RPC resolves — see ui.beginOdooLookup/applyOdooFieldMeta.
-    if (canLookUpOdoo && info.odooModel) {
-      // A list column is declared in the list view, not the form view, so the
-      // arch/chain lookups have to be told which one is on screen — otherwise
-      // inspecting a list cell named "email" reports whatever the *form* view
-      // happens to declare under that name.
-      const viewType = resolved.kind === "form" || resolved.kind === "button" ? "form" : "list";
-      info.odooViewType = viewType;
-
+    if (state.settings.odooMode && odoo) {
       const requestId = ui.beginOdooLookup();
-
-      // A button has no ir.model.fields row: the interesting metadata is how
-      // it's declared in the view (method/action name, modifiers, groups) plus
-      // the View Stack it belongs to. So it skips the field lookup entirely.
-      const isButton = info.kind === "button";
-      if (!isButton) {
-        odoo.fetchFieldMeta(info.odooModel, info.odooFieldName).then((meta) => {
-          ui.applyOdooFieldMeta(requestId, meta);
-        });
-      }
-
-      odoo.fetchViewNodeAttrs(info.odooModel, isButton ? "button" : "field", isButton ? info.nameAttr : info.odooFieldName, viewType).then(
-        (viewAttrs) => {
-          ui.applyOdooViewAttrs(requestId, viewAttrs);
+      const inspectedUrl = location.href;
+      const current = () => location.href === inspectedUrl && resolved.el.isConnected && state.enabled && state.settings.odooMode && ui.isCurrentLookup(requestId, info);
+      (async () => {
+        const recordInfo = await odoo.resolveRecordInfo(resolved.el);
+        if (!current()) return;
+        info.odooRecordInfo = recordInfo;
+        info.odooModel = recordInfo?.model || null;
+        ui.refreshPanel(info);
+        if (!info.odooModel) return;
+        const isButton = info.kind === 'button';
+        const viewType = recordInfo?.viewType || (resolved.kind === 'form' || isButton ? 'form' : 'list');
+        info.odooViewType = viewType;
+        const viewId = recordInfo?.viewId || null;
+        const context = recordInfo?.context || {};
+        const apply = (promise, fn) => promise.then(value => { if (current()) fn(value); }).catch(() => {});
+        if (info.odooFieldName && !isButton)
+          apply(odoo.fetchFieldMeta(info.odooModel, info.odooFieldName, context), meta => ui.applyOdooFieldMeta(requestId, meta));
+        if (isButton || info.odooFieldName)
+          apply(odoo.fetchViewNodeAttrs(info.odooModel, isButton ? 'button' : 'field', isButton ? info.nameAttr : info.odooFieldName, viewType, viewId, context), attrs => ui.applyOdooViewAttrs(requestId, attrs));
+        apply(odoo.fetchViewStack(info.odooModel, viewType, viewId, context), stack => ui.applyViewStack(requestId, stack));
+        apply(odoo.fetchServerVersion(), version => ui.applyOdooVersion(requestId, version));
+        if (recordInfo?.actionId && !recordInfo.actionName && /^\d+$/.test(String(recordInfo.actionId))) {
+          apply(odoo.fetchActionDetails(recordInfo.actionId), action => {
+            if (!action || action.error) return;
+            Object.assign(recordInfo, {
+              actionName: action.name, actionType: action.type, actionXmlId: action.xml_id,
+              actionContext: typeof action.context === 'string' ? action.context : JSON.stringify(action.context || {}),
+              actionDomain: typeof action.domain === 'string' ? action.domain : JSON.stringify(action.domain || []),
+            });
+            ui.refreshPanel(info);
+          });
         }
-      );
-
-      // Which XML ID this page is rendered from, and what it inherits from.
-      odoo.fetchViewStack(info.odooModel, viewType).then((stack) => {
-        ui.applyViewStack(requestId, stack);
-      });
-      // Server version decides which deep-link style the panel offers, and is
-      // cached per page, so this costs one extra RPC per tab at most.
-      odoo.fetchServerVersion().then((version) => {
-        ui.applyOdooVersion(requestId, version);
-      });
+      })().catch(error => logDebug('Context lookup failed', String(error)));
     }
 
     if (state.debug) {
@@ -284,7 +273,11 @@
 
   function onKeyDown(e) {
     if (e.key !== "Escape") return;
-    if (ui.isOptionsOpen()) {
+    if (window.__FI__.technical?.isOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.__FI__.technical.close();
+    } else if (ui.isOptionsOpen()) {
       e.preventDefault();
       e.stopPropagation();
       ui.closeOptions(true);
@@ -363,6 +356,7 @@
 
   function disable(userInitiated = false) {
     state.enabled = false;
+    window.__FI__.technical?.close();
     document.documentElement.removeAttribute("data-fi-active");
     detachListeners();
     detector.stopObserving();
@@ -402,6 +396,7 @@
   }
 
   function updateSettings(newSettings) {
+    window.__FI__.technical?.close();
     const wasOdooMode = state.settings.odooMode;
     const wasReveal = state.settings.showSensitiveValues;
     state.settings = { ...state.settings, ...(newSettings || {}) };

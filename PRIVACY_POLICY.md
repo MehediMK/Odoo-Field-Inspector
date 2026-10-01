@@ -1,6 +1,6 @@
 # Privacy Policy — Field Inspector (Odoo Field Inspector)
 
-**Effective date:** 2026-09-25
+**Effective date:** 2026-10-01
 
 This policy covers the "Odoo Field Inspector" Chrome extension ("the
 extension", "Field Inspector"). It's written to be read on its own — you
@@ -18,7 +18,7 @@ your data, though the code is open for inspection in this repository.
   (on by default, toggle it off any time in the popup). When it's on and
   you click a field the extension recognizes as belonging to an Odoo
   form, list, or wizard, the extension sends that field's **technical
-  name and model name only** (e.g. `res.partner` / `email` — never the
+  name and model name** (e.g. `res.partner` / `email` — never the
   field's *value*) to the **same Odoo server the page is already open
   on**, using your existing logged-in session, to fetch that field's
   real definition. This request never goes to us or to any third party
@@ -34,8 +34,19 @@ your data, though the code is open for inspection in this repository.
   active view's record id, the `inherit_id` chain above it, and one batched
   `ir.model.data` lookup that turns those ids into XML IDs — so the panel can
   show which view file you're looking at and what it extends. These are view
-  *identities and names only*: the extension never downloads a view's source
-  XML (`arch_db`), and it reads no record data through them.
+  identities and names alongside the merged XML. **View XML** additionally
+  downloads a source view's `arch_db` only when you select that source view.
+- **Record & Model Tools** reads the selected saved record, access-rule metadata,
+  group names and technical records from the same Odoo server on demand. Requests
+  can include model/record/view IDs and the current Odoo request context (such as
+  language and allowed company IDs). Binary fields are omitted from record reads.
+  Secret-named fields are excluded unless Show sensitive values is enabled;
+  nested JSON credentials are also redacted from display and copy by default.
+- A read-only page-runtime probe obtains the current model, record/view IDs and
+  request context. This information is relayed through the extension's worker
+  and retained in tab memory only. Tool results are cleared on close or settings
+  changes and are not written to extension storage. **Odoo Debug Mode** changes
+  the current page's debug URL parameter and reloads that page when you apply it.
 - In **Domain Builder**, clicking **Load Fields** while Odoo Developer Mode
   is on sends the chosen model name to that same Odoo server to fetch field
   definitions. Domain conditions and values stay in tab memory and are only
@@ -80,7 +91,7 @@ advertising in this extension.
 | A field's technical model + field name (e.g. `res.partner.email`) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field | The **same Odoo server** the current page is already loaded from, over that page's existing logged-in session | Fetch the field's real `ir.model.fields` definition and how it's declared in the current view, so you don't have to guess it from CSS classes |
 | An inspected button's model + its method/action name (e.g. `res.partner` + `action_send`) | Only when **Odoo Developer Mode** is on *and* the button is inspected (click-through mode, or selected in the Field Finder) | The **same Odoo server**, using your existing session | Look up that button's declaration in the view arch — its `type`, `special`, `confirm` and `groups`, which the rendered page does not keep. No record values are involved, and no `ir.model.fields` lookup is made for a button |
 | A fixed configuration key name (`web.base.build.description`) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field — at most once per tab | The **same Odoo server**, using your existing session | Read your server's Odoo version, so the panel can deep-link to a field record in the URL style that version actually supports. The *value* returned (e.g. `17.0`) is used to pick a link shape and is shown in the panel; it is never stored or sent anywhere else |
-| A model's view record id and its `inherit_id` ancestors (ids and internal names only) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field | The **same Odoo server**, using your existing session | Show which XML ID the page is rendered from and what it inherits from. The extension reads view *metadata* only — it never downloads a view's full source XML (`arch_db`) |
+| A model's view record id and its `inherit_id` ancestors (ids and internal names only) | Only when **Odoo Developer Mode** is on *and* the clicked field is recognized as an Odoo field | The **same Odoo server**, using your existing session | Show which XML ID the page is rendered from and what it inherits from. The inspector reads view metadata and merged XML; View XML loads source XML (`arch_db`) on demand |
 | The ids of those view records, looked up in `ir.model.data` | Same as above, in one batched request | The **same Odoo server**, using your existing session | Resolve view record ids to their external IDs (e.g. `base.view_partner_form`). The returned values are XML ID strings — which custom modules extend a view — shown in the panel; never stored or sent anywhere else |
 | Loaded chatter messages (author, displayed date, message body) | When you open Chatter Manager | **Nowhere** — shown and searched locally; clipboard only when you choose Copy Message | Read, search, and filter already-loaded messages |
 | Domain Builder model name | When you click **Load Fields** with Odoo Developer Mode on | The **same Odoo server**, using your existing session | Read field definitions using `fields_get` |
@@ -88,12 +99,11 @@ advertising in this extension.
 | Your extension preferences (Form View / List View / Highlight / Copy Format / Odoo Developer Mode / Show Sensitive Values / Intercept Clicks / Theme / Accent / Density / Debug on-off) | Whenever you change a setting in the popup, the Options menu, or the extension's Settings page | **Nowhere** — saved only to `chrome.storage.local`, a storage area local to your browser profile | Remember your preferences between sessions |
 | A site you choose to auto-enable on (e.g. `https://erp.example.com`) — the origin string only | When you tick **Auto-enable on this site**, or add the origin on the Settings page | **Nowhere** — saved only to `chrome.storage.local`; the matching host permission is visible to you in `chrome://extensions` | Start the inspector automatically when you load a page on that site, instead of after each navigation |
 
-No field *values* are ever included in the Odoo lookup — only the
-technical field name and the model name. Inspecting a button sends the same
-kind of identifier (a model plus a method or action name), never the button's
-label, the record it is aimed at, or any record data. No page content, browsing
-history, or personal information is ever transmitted by this extension,
-to us or to anyone else, under any setting.
+Record and view requests include identifiers and the current Odoo context, which
+can contain default values. The extension does not send unsaved form contents as
+record updates and does not call create, write, delete, or server-action execution
+methods. Requests go only to the current Odoo server. Nothing is sent to us or to
+third-party services. Clipboard copies occur only when you choose Copy.
 
 ## Permissions and why we need them
 

@@ -23,9 +23,11 @@ const FIXTURES = [
   ['settings-theme.html', '?debug=1'],
   ['settings-theme.html', '?debug=0'],
   ['options-page.html', ''],
+  ['technical-tools.html', ''],
 ];
 
-for (const [fixture, query] of FIXTURES) {
+const selected = process.argv[2];
+for (const [fixture, query] of FIXTURES.filter(([name]) => !selected || name === selected)) {
   const label = query ? `${fixture}${query}` : fixture;
   let last = null;
   // One retry: headless Chrome occasionally comes back with no DOM at all

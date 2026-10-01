@@ -5,20 +5,10 @@
  * help text, selection options...) straight from the Odoo server the page
  * is already talking to, instead of guessing from the widget's CSS class.
  *
- * Model detection: a content script's isolated world can't read the page's
- * own JS state (OWL's component tree), and the URL doesn't help either —
- * clicking into a wizard/dialog never changes the URL, so the model can't
- * be parsed from it. Instead this observes the page's own network traffic:
- * every Odoo RPC call, on every version since Odoo 8, POSTs to
- * `/web/dataset/call_kw/<model>/<method>`, which the standard (no extra
- * permission needed) Resource Timing API can see. A wizard fires its own
- * get_views/onchange/web_read the moment it opens, so "the model behind the
- * most recent such call" reliably tracks whatever the user is looking at,
- * wizard included.
- *
- * The RPC calls this file makes reuse the page's own session (same-origin
- * fetch, page's cookies) — this is the one part of the extension that talks
- * to a server, and only fires for a field whose Odoo model was detected.
+ * Context detection uses a read-only MAIN-world probe via the service worker,
+ * with scoped DOM/URL fallbacks and a labelled resource-timing heuristic.
+ * Record reads require a verified runtime/DOM/URL identity. RPC requests use
+ * only the current origin and logged-in session; no business data is written.
  */
 (function () {
   if (window.__FI__ && window.__FI__.odoo) return; // already loaded
@@ -26,6 +16,7 @@
 
   const odoo = {};
 
+  const ownRequests = [];
   const CALL_KW_RE = /\/web\/dataset\/call_kw\/([^/]+)\/([^/?]+)/;
 
   // Calls that reliably mean "this establishes/refreshes the CURRENT view's
@@ -63,6 +54,7 @@
       const entries = performance.getEntriesByType("resource");
       let best = null;
       for (const e of entries) {
+        if (ownRequests.some(r => e.name.endsWith(r.path) && e.startTime >= r.start && e.startTime <= r.end)) continue;
         const parsed = parseCallKw(e.name);
         if (!parsed || !STRONG_SIGNAL_METHODS.has(parsed.method)) continue;
         if (!best || e.startTime > best.startTime) best = { model: parsed.model, startTime: e.startTime };
@@ -73,9 +65,158 @@
     }
   };
 
+  /**
+   * Best-effort: extract record information from the current Odoo page.
+   *
+   * Reads from multiple sources (URL hash params, DOM data attributes,
+   * Resource Timing network calls) to build a picture of the current
+   * record context. Returns null when not on an Odoo page.
+   *
+   * @returns {Object|null} { model, recordId, viewType, actionType, actionName,
+   *   actionId, actionXmlId, actionContext, actionDomain }
+   */
+  odoo.detectRecordInfo = function (element) {
+    const info = {
+      model: null,
+      recordId: null,
+      viewType: null,
+      actionType: null,
+      actionName: null,
+      actionId: null,
+      actionXmlId: null,
+      actionContext: null,
+      actionDomain: null,
+    };
+
+    const scope = element?.closest('.modal, [role="dialog"]') || document;
+    const scopedView = element?.closest('[data-model]');
+    if (scopedView?.dataset.model) {
+      info.model = scopedView.dataset.model;
+      info.recordId = scopedView.dataset.resId || scopedView.dataset.recordId || null;
+    }
+    const localView = element?.closest('.o_form_view, .o_list_view, .o_list_renderer, .o_kanban_view');
+    if (localView) info.viewType = localView.matches('.o_list_view,.o_list_renderer') ? 'list' : localView.matches('.o_kanban_view') ? 'kanban' : 'form';
+    info.source = 'DOM / URL fallback';
+    info.verified = !!(info.model && info.recordId);
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (scope === document) {
+      info.actionId = params.get('action');
+      const route = location.pathname.match(/\/action-(\d+)(?:\/|$)/);
+      if (!info.actionId && route) info.actionId = route[1];
+    }
+    // --- 1. URL hash parameters (Odoo 16 and earlier style) ---
+    // e.g. #model=res.partner&id=5&view_type=form
+    try {
+      const hash = location.hash.slice(1);
+      if (scope === document && (hash.includes("model=") || hash.includes("id=") || hash.includes("view_type="))) {
+        const params = new URLSearchParams(hash);
+        if (!info.model && params.get("model")) info.model = params.get("model");
+        if (!info.recordId && params.get('id') && params.get('model') === info.model) {
+          info.recordId = params.get('id'); info.verified = true;
+        }
+        if (!info.viewType && params.get("view_type")) info.viewType = params.get("view_type");
+      }
+    } catch (err) {
+      /* URL parse failed — ignore */
+    }
+
+    if (scope === document && !info.model) {
+      const route = location.pathname.match(/\/odoo\/([a-z_][\w]*\.[\w.]+)\/(\d+)(?:\/|$)/);
+      if (route) { info.model = route[1]; info.recordId = route[2]; info.viewType = 'form'; info.verified = true; }
+    }
+    // --- 2. DOM-based detection: Odoo web client containers ---
+    try {
+      // Odoo action manager container often carries action metadata
+      const actionEl = scope.querySelector(".o_action, .o_action_manager");
+      if (actionEl) {
+        if (!info.actionId && actionEl.dataset.actionId) info.actionId = actionEl.dataset.actionId;
+        if (!info.actionXmlId && actionEl.dataset.actionXmlId) info.actionXmlId = actionEl.dataset.actionXmlId;
+        if (!info.actionType && actionEl.dataset.actionType) info.actionType = actionEl.dataset.actionType;
+        if (!info.actionName && actionEl.dataset.actionName) info.actionName = actionEl.dataset.actionName;
+      }
+
+      // Form view: record ID lives on the form controller
+      const formView = localView ? (localView.matches(".o_form_view") ? localView : null) : scope.querySelector(".o_form_view");
+      if (formView) {
+        if (!info.viewType) info.viewType = "form";
+        if (!info.recordId) {
+          info.recordId =
+            formView.dataset.resId || formView.dataset.recordId || formView.dataset.id || null;
+        }
+        // The model is often on the form controller's dataset
+        if (!info.model && formView.dataset.model) info.model = formView.dataset.model;
+        if (info.model === formView.dataset.model && (formView.dataset.resId || formView.dataset.recordId)) info.verified = true;
+      }
+
+      // List view: model detection from the list controller
+      const listView = scope.querySelector(".o_list_view, .o_list_renderer");
+      if (listView) {
+        if (!info.viewType) info.viewType = "list";
+        if (!info.model && listView.dataset.model) info.model = listView.dataset.model;
+      }
+
+      // Kanban view
+      const kanbanView = scope.querySelector(".o_kanban_view");
+      if (kanbanView) {
+        if (!info.viewType) info.viewType = "kanban";
+        if (!info.model && kanbanView.dataset.model) info.model = kanbanView.dataset.model;
+      }
+
+      // Breadcrumb: the current action name is often in the breadcrumb
+      if (!info.actionName) {
+        const breadcrumb = scope.querySelector(".o_breadcrumb, .o_control_panel_breadcrumbs");
+        if (breadcrumb) {
+          const active = breadcrumb.querySelector(".active, [aria-current='page']");
+          if (active) info.actionName = active.textContent.trim();
+        }
+      }
+
+      // Odoo action manager: look for action buttons/menus that reveal the action
+      if (!info.actionId) {
+        const menuBtn = scope.querySelector('[data-menu], .o_nav_entry.active, .o_menu_brand');
+        if (menuBtn && !info.actionName) {
+          info.actionName = menuBtn.textContent.trim();
+        }
+      }
+    } catch (err) {
+      /* DOM query failed — ignore */
+    }
+
+    if (!info.model && scope === document) {
+      info.model = odoo.detectCurrentModel();
+      if (info.model) info.source = 'Network heuristic (unverified)';
+    }
+    if (scope !== document && !info.model) info.source = 'Wizard context unavailable';
+
+    // Return null only if we found nothing at all
+    const hasAny = info.model || info.viewType || info.actionId;
+    return hasAny ? info : null;
+  };
+
+  /**
+   * Fetches the action details for a given action ID via Odoo's RPC.
+   * Returns { id, name, type, xml_id, context, domain, ... } or null on error.
+   */
+  odoo.fetchActionDetails = function (actionId) {
+    if (!actionId) return Promise.resolve(null);
+    return odoo
+      .call("ir.actions.act_window", "read", [[Number(actionId)]], {
+        fields: ["id", "name", "type", "xml_id", "context", "domain", "res_model", "view_mode"],
+      })
+      .then((rows) => (rows && rows[0]) || null)
+      .catch((err) => {
+        console.error("[Field Inspector] Odoo action details lookup failed:", err);
+        return { error: (err && err.message) || String(err) };
+      });
+  };
+
   /** Low-level Odoo JSON-RPC call, reusing the page's own session. */
   odoo.call = async function (model, method, args = [], kwargs = {}) {
-    const res = await fetch(`/web/dataset/call_kw/${encodeURIComponent(model)}/${encodeURIComponent(method)}`, {
+    const path = `/web/dataset/call_kw/${encodeURIComponent(model)}/${encodeURIComponent(method)}`;
+    const request = { path, start: performance.now(), end: Infinity };
+    ownRequests.push(request);
+    if (ownRequests.length > 1000) ownRequests.shift();
+    const res = await fetch(path, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
@@ -85,7 +226,7 @@
         id: Math.floor(Math.random() * 1e9),
         params: { model, method, args, kwargs },
       }),
-    });
+    }).finally(() => { request.end = performance.now(); });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (json.error) {
@@ -105,7 +246,8 @@
     "related",
     "compute",
     "help",
-    "selection",
+    "selection", "depends", "modules", "index", "copied", "translate",
+    "relation_field", "on_delete", "groups", "domain", "size",
   ];
 
   const fieldMetaCache = new Map(); // "model:field" -> Promise<meta>
@@ -117,26 +259,29 @@
    * failed (network, permissions, not actually an Odoo server, etc).
    * Cached per (model, field) for the life of the page.
    */
-  odoo.fetchFieldMeta = function (model, fieldName) {
+  odoo.fetchFieldMeta = function (model, fieldName, context = {}) {
     if (!model || !fieldName) return Promise.resolve(null);
-    const key = `${model}:${fieldName}`;
+    const key = JSON.stringify([model, fieldName, context]);
     if (fieldMetaCache.has(key)) return fieldMetaCache.get(key);
 
     const promise = odoo
-      .call("ir.model.fields", "search_read", [], {
+      .call("ir.model.fields", "fields_get", [], { context }).catch(() => null)
+      .then(schema => odoo.call("ir.model.fields", "search_read", [], {
         domain: [
           ["model", "=", model],
           ["name", "=", fieldName],
         ],
-        fields: FIELD_META_FIELDS,
+        context,
+        fields: schema ? FIELD_META_FIELDS.filter(name => schema[name]) : FIELD_META_FIELDS.slice(0, 11),
         limit: 1,
-      })
+      }))
       .then((rows) => (rows && rows[0]) || null)
       .catch((err) => {
         console.error("[Field Inspector] Odoo field metadata lookup failed:", err);
         return { error: (err && err.message) || String(err) };
       });
 
+    promise.then(result => { if (result?.error) fieldMetaCache.delete(key); });
     fieldMetaCache.set(key, promise);
     return promise;
   };
@@ -152,11 +297,11 @@
    * inheritance chain below.
    *
    * `viewType` is "form" or "list". Odoo renamed the list view type from
-   * "tree" to "list" in 17, so an unknown/failed type is retried under both
+   * "tree" to "list" across versions, so an unknown/failed type is retried under both
    * names rather than reported as "no such view" on half the versions.
    */
-  function fetchViewArch(model, viewType = "form") {
-    const key = `${model}:${viewType}`;
+  function fetchViewArch(model, viewType = "form", viewId = null, context = {}) {
+    const key = JSON.stringify([model, viewType, viewId, context]);
     if (viewArchCache.has(key)) return viewArchCache.get(key);
 
     const order = viewType === "list" ? ["list", "tree"] : viewType === "tree" ? ["tree", "list"] : [viewType];
@@ -165,7 +310,7 @@
       let lastError = null;
       for (const type of order) {
         try {
-          const res = await odoo.call(model, "get_views", [], { views: [[false, type]], options: {} });
+          const res = await odoo.call(model, "get_views", [], { views: [[viewId || false, type]], options: {}, context });
           const view = res && res.views && res.views[type];
           if (view) return { ...view, requestedType: type };
         } catch (err) {
@@ -179,6 +324,7 @@
       return { error: (err && err.message) || String(err) };
     });
 
+    promise.then(result => { if (result?.error || !result) viewArchCache.delete(key); });
     viewArchCache.set(key, promise);
     return promise;
   }
@@ -207,26 +353,35 @@
    * is what the field's effective definition comes from — so the panel reports
    * the stack that contributed, not a per-field attribution between them.
    */
-  odoo.fetchViewStack = async function (model, viewType = "form") {
+  odoo.fetchViewStack = async function (model, viewType = "form", viewId = null, context = {}) {
     if (!model) return null;
-    const key = `${model}:${viewType}`;
+    const key = JSON.stringify([model, viewType, viewId, context]);
     if (viewStackCache.has(key)) return viewStackCache.get(key);
 
     const promise = (async () => {
-      const active = await fetchViewArch(model, viewType);
+      const active = await fetchViewArch(model, viewType, viewId, context);
       if (!active || active.error) return active;
       if (active.id == null) return null;
 
+      let selected = active;
+      let selectionError = null;
+      if (!Object.prototype.hasOwnProperty.call(active, 'inherit_id')) {
+        try {
+          const rows = await odoo.call('ir.ui.view', 'read', [[active.id]], { fields: ['name','model','type','inherit_id'], context });
+          if (rows?.[0]) selected = { ...active, ...rows[0] };
+        } catch (error) { selectionError = error.message || String(error); }
+      }
       const chain = [{ id: active.id, name: active.name || "", model: model, xmlId: active.xml_id || "" }];
       const seen = new Set([active.id]);
-      let cursor = active.inherit_id && active.inherit_id[0];
+      if (selectionError) chain.partial = selectionError;
+      let cursor = selected.inherit_id && selected.inherit_id[0];
 
       while (cursor != null && chain.length < MAX_INHERIT_DEPTH) {
         if (seen.has(cursor)) break; // defensive: a cycle would otherwise loop forever
         seen.add(cursor);
         let parent;
         try {
-          [parent] = await odoo.call("ir.ui.view", "read", [[cursor]], { fields: ["name", "model", "type", "inherit_id"] });
+          [parent] = await odoo.call("ir.ui.view", "read", [[cursor]], { fields: ["name", "model", "type", "inherit_id"], context });
         } catch (err) {
           // An ir.ui.view row can be unreadable for this user (record rules
           // on the view model). Keep what we have and mark the chain partial.
@@ -288,7 +443,7 @@
 
     const readParam = (key) =>
       odoo
-        .call("ir.config_parameter", "get_param", [[key]])
+        .call("ir.config_parameter", "get_param", [key])
         .then((value) => (typeof value === "string" && value.trim() ? value.trim() : null))
         .catch(() => null);
 
@@ -390,10 +545,10 @@
    * Resolves to `{ attrs, occurrences }`, `null` (node not found in the
    * arch — it may only exist in a different view), or `{ error }`.
    */
-  odoo.fetchViewNodeAttrs = async function (model, tagName, nodeName, viewType = "form") {
+  odoo.fetchViewNodeAttrs = async function (model, tagName, nodeName, viewType = "form", viewId = null, context = {}) {
     if (!model || !nodeName || !tagName) return null;
     try {
-      const view = await fetchViewArch(model, viewType);
+      const view = await fetchViewArch(model, viewType, viewId, context);
       if (!view) return null;
       if (view.error) return view;
 
@@ -426,6 +581,69 @@
       console.error("[Field Inspector] Odoo view field attrs parse failed:", err);
       return { error: (err && err.message) || String(err) };
     }
+  };
+
+  odoo.fetchViewArch = fetchViewArch;
+  odoo.clearViewCache = () => { viewArchCache.clear(); viewStackCache.clear(); };
+
+  odoo.resolveRecordInfo = async function (element) {
+    const fallback = odoo.detectRecordInfo(element);
+    const marker = 'data-fi-context-' + Math.random().toString(36).slice(2);
+    let timer;
+    try {
+      element?.setAttribute(marker, '');
+      const runtime = await Promise.race([
+        Promise.resolve(chrome.runtime.sendMessage({ type: 'FI_READ_CONTEXT', selector: element ? `[${marker}]` : '' })),
+        new Promise(resolve => { timer = setTimeout(() => resolve(null), 1800); }),
+      ]);
+      if (runtime?.model) return { ...fallback, ...runtime };
+    } catch (_) { /* activeTab may have expired; retain explicitly labelled fallback */ }
+    finally {
+      clearTimeout(timer);
+      element?.removeAttribute(marker);
+    }
+    return fallback;
+  };
+
+  // Recursive redaction also covers JSON fields containing nested credentials.
+  odoo.redactData = function redact(value, reveal = false) {
+    if (Array.isArray(value)) return value.map(item => redact(item, reveal));
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
+      !reveal && window.__FI__.utils.isSensitiveName(key) ? window.__FI__.utils.REDACTED_TEXT : redact(item, reveal)]));
+  };
+
+  odoo.fetchRecordData = async function (info, reveal = false) {
+    const id = Number(info.recordId);
+    if (!info.model || !Number.isSafeInteger(id) || id <= 0 || !info.verified)
+      throw new Error('A verified saved record is required. Open a saved form and inspect a field again.');
+    const context = { ...(info.context || {}), bin_size: true };
+    const schema = await odoo.call(info.model, 'fields_get', [], { context });
+    const fields = Object.keys(schema).filter(name => schema[name].type !== 'binary' &&
+      (reveal || !window.__FI__.utils.isSensitiveName(name)));
+    const rows = await odoo.call(info.model, 'read', [[id]], { fields, context });
+    if (!rows?.length) throw new Error('Record unavailable or not readable by your account.');
+    const data = odoo.redactData(rows[0], reveal);
+    for (const [name, field] of Object.entries(schema)) {
+      if (field.type === 'binary') data[name] = '(binary omitted)';
+      else if (!reveal && window.__FI__.utils.isSensitiveName(name)) data[name] = window.__FI__.utils.REDACTED_TEXT;
+    }
+    return data;
+  };
+
+  odoo.recordUrl = function (model, id) {
+    if (location.pathname.startsWith('/odoo')) return `${location.origin}/odoo/${encodeURIComponent(model)}/${Number(id)}`;
+    return `${location.origin}/web#model=${encodeURIComponent(model)}&id=${Number(id)}&view_type=form`;
+  };
+
+  odoo.debugUrl = function (url, mode) {
+    if (!['off', '1', 'assets'].includes(mode)) throw new Error('Invalid debug mode');
+    const next = new URL(url);
+    next.searchParams.delete('debug');
+    if (mode !== 'off') next.searchParams.set('debug', mode);
+    const hash = new URLSearchParams(next.hash.slice(1));
+    if (hash.has('debug')) { hash.delete('debug'); next.hash = hash.toString(); }
+    return next.href;
   };
 
   window.__FI__.odoo = odoo;

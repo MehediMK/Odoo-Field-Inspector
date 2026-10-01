@@ -1,0 +1,100 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<div class="o_form_view" data-model="res.partner" data-res-id="7">
+  <div class="o_field_widget o_field_char o_required_modifier" name="name"><label for="name">Name</label><input id="name" name="name" required value="Unsaved Alice"></div>
+  <div class="o_field_widget o_field_many2one" name="partner_id"><span>Partner</span></div>
+  <button class="o_form_button" type="button" name="action_test">Action</button>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+let receiver, clipboard = '', delayedRead, pendingAction, actionMode = false, runtimeId = 7, accessDenied = false;
+const calls = [];
+window.chrome = { runtime: { onMessage: { addListener(fn) { receiver = fn; } }, async sendMessage(message) {
+  if(message.type === 'FI_READ_CONTEXT') return { model:'res.partner',recordId:runtimeId,viewType:'form',viewId:88,verified:true,source:'Odoo runtime',context:{lang:'en_US'},actionId:actionMode?5:null };
+} }, storage:{local:{set:async()=>{},get:async()=>({})}} };
+window.fetch = async (url, options) => {
+  const {model,method,args,kwargs} = JSON.parse(options.body).params;
+  calls.push({model,method,args,kwargs});
+  let result;
+  if (model === 'ir.actions.act_window') result = await new Promise(resolve => pendingAction = resolve);
+  else if (method === 'fields_get') {
+    const names = model === 'ir.model.fields' ? ['field_description','ttype','required','readonly','store','depends','modules','index','copied','translate','relation_field','on_delete','groups','domain','size'] : model === 'res.partner' ? ['name','settings','password','image'] : ['name','group_id','groups','domain_force','active','global','perm_read','perm_write','perm_create','perm_unlink'];
+    result = Object.fromEntries(names.map(name => [name,{type:name==='image'?'binary':'char'}]));
+  } else if (model === 'res.partner' && method === 'read') {
+    result = delayedRead ? await new Promise(resolve => delayedRead = resolve) : [{id:7,name:'Saved Alice <img src=x onerror=alert(1)>',settings:{token:'HIDDEN_SECRET',theme:'light'},password:'HIDDEN_PASSWORD'}];
+  } else if (method === 'get_views') result = {views:{form:{id:kwargs.views[0][0]||99,arch:'<form><field name="name"/></form>'}}};
+  else if (model === 'ir.model.fields') result = [{id:10,field_description:'Name',ttype:'char',depends:'partner_id.name',modules:'base',index:true,copied:false}];
+  else if (model === 'ir.config_parameter') result = '19.0';
+  else if (model === 'ir.ui.view' && method === 'search_read') result = kwargs.domain[0][0] === 'inherit_id' && kwargs.domain[0][2].includes(88) ? [{id:89,name:'Custom partner view',inherit_id:[88],priority:20,mode:'extension',active:true}] : [];
+  else if (model === 'ir.ui.view' && method === 'read') result = [{id:89,arch_db:'<data><xpath expr="//field[@name=\'name\']" position="after"><field name="phone"/></xpath></data>'}];
+  else if (model === 'ir.model.access' || model === 'ir.rule') {
+    if (accessDenied) return {ok:true,json:async()=>({error:{message:'Access denied'}})};
+    result = [{id:1,name:model==='ir.rule'?'Own records':'User access',groups:[4],domain_force:'[("user_id", "=", user.id)]',perm_read:true,perm_write:false}];
+  } else if (model === 'res.groups') result = [{id:4,display_name:'Internal User'}];
+  else if (model === 'ir.actions.server') result = [{id:33,display_name:'Server action'}];
+  else result = [];
+  return {ok:true,json:async()=>({result})};
+};
+</script>
+<script src="../shared.js"></script><script src="../content/utils.js"></script><script src="../content/odoo.js"></script><script src="../content/detector.js"></script><script src="../content/ui.js"></script><script src="../content/domain.js"></script><script src="../content/domain-builder.js"></script><script src="../content/chatter.js"></script><script src="../content/technical.js"></script><script src="../content/content.js"></script>
+<script>
+(async()=>{
+const checks=[]; const check=(condition,name)=>{if(!condition)throw Error(name);checks.push(name);};
+const settle=()=>new Promise(resolve=>setTimeout(resolve,45));
+const message=(type,settings)=>receiver({type,settings},{},()=>{});
+const {ui,odoo,technical,utils}=window.__FI__;
+utils.copyToClipboard=async text=>{clipboard=text;return true;};
+const input=document.querySelector('#name');
+const click=el=>el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,composed:true}));
+message('FI_ENABLE',{odooMode:true}); click(input); await settle();
+check(ui.lastInfo.odooRecordInfo.recordId===7,'Runtime resolves saved record');
+check(ui.lastInfo.odooFieldMeta.depends==='partner_id.name','Extended field metadata loaded');
+check(calls.some(c=>c.method==='get_views'&&c.kwargs.views[0][0]===88),'Exact active view ID requested');
+check(ui.bodyEl.textContent.includes('Dependencies'),'Advanced metadata rendered');
+await technical.open('record');
+let panel=ui.shadowRoot.querySelector('.fi-technical');
+check(panel.textContent.includes('Saved Alice'),'Record viewer reads saved data');
+check(!panel.textContent.includes('Unsaved Alice'),'Unsaved input not presented as saved data');
+check(!panel.textContent.includes('HIDDEN_'),'Nested and top-level credentials redacted');
+check(!panel.querySelector('img'),'Record HTML displayed as text');
+click([...panel.querySelectorAll('button')].find(b=>b.textContent==='Copy JSON'));await settle();
+check(!clipboard.includes('HIDDEN_')&&JSON.parse(clipboard).id===7,'Copied JSON respects redaction');
+const search=panel.querySelector('input');search.value='settings';search.dispatchEvent(new Event('input'));
+check(panel.querySelector('[data-count]').textContent.startsWith('1 of'),'Record search filters fields');
+await technical.open('views');
+check(panel.textContent.includes('Active view #88'),'View explorer labels active view');
+check(panel.textContent.includes('Custom partner view'),'Inherited views listed');
+click(panel.querySelector('[data-view="89"]'));await settle();
+check(panel.querySelector('[data-xml]').textContent.includes('phone'),'Inherited XML loaded on demand');
+await technical.open('access');
+check(panel.textContent.includes('Own records')&&panel.textContent.includes('Internal User'),'Access rules include group names and domains');
+accessDenied=true;await technical.open('access');
+check(panel.textContent.includes('Access denied'),'Permission error visible without breaking viewer');accessDenied=false;
+await technical.open('shortcuts');click([...panel.querySelectorAll('button')].find(b=>b.textContent==='Server Actions'));await settle();
+check(panel.querySelector('[data-results] a')?.getAttribute('href').includes('33'),'Technical shortcut opens matching record');
+check(!calls.some(c=>['write','create','unlink','run'].includes(c.method)),'Tools never mutate records or execute server actions');
+await technical.open('debug');check(panel.querySelector('select').options.length===3,'Debug controls expose Off, Developer and Assets');
+technical.close();ui.openFinder();
+const filter=ui.finderPanelEl.querySelector('select');filter.value='required';filter.dispatchEvent(new Event('change'));
+check(ui.finderPanelEl.querySelectorAll('.fi-finder-result').length===1,'Required filter');
+filter.value='relational';filter.dispatchEvent(new Event('change'));
+check(ui.finderPanelEl.querySelector('.fi-finder-result').textContent.includes('partner_id'),'Relational filter');
+filter.value='buttons';filter.dispatchEvent(new Event('change'));
+check(ui.finderPanelEl.querySelectorAll('.fi-finder-result').length===1,'Buttons filter');
+const finderSearch=ui.finderPanelEl.querySelector('input');finderSearch.focus();finderSearch.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+check(ui.shadowRoot.activeElement.classList.contains('fi-finder-result'),'Arrow keys focus Finder results');ui.closeFinder();
+// A delayed action response must not resurrect a previously inspected field.
+actionMode=true;click(input);await settle();const old=ui.lastInfo;actionMode=false;runtimeId=8;click(input);await settle();
+pendingAction([{id:5,name:'OLD ACTION',res_model:'wrong.model'}]);await settle();
+check(ui.lastInfo!==old&&ui.lastInfo.odooRecordInfo.recordId===8&&!ui.bodyEl.textContent.includes('OLD ACTION'),'Late action result cannot replace current inspection');
+// Disabled inspectors must not reopen after a pending read.
+delayedRead=true;const opening=technical.open('record');await settle();message('FI_DISABLE');delayedRead([{id:8,name:'Late response'}]);await opening;
+check(!technical.isOpen()&&!panel.textContent.includes('Late response'),'Disable discards pending tool result');
+message('FI_ENABLE',{odooMode:true});runtimeId=7;click(input);await settle();delayedRead=false;
+await technical.open('record');message('FI_UPDATE_SETTINGS',{showSensitiveValues:false});
+check(!technical.isOpen()&&!panel.textContent.includes('Saved Alice'),'Settings change clears tool data');
+message('FI_UPDATE_SETTINGS',{odooMode:false});const count=calls.length;await technical.open('record');
+check(calls.length===count,'Developer-mode gate prevents tool RPCs');
+technical.close();
+document.querySelector('#result').textContent='PASS: '+checks.join(' | ');
+})().catch(error=>document.querySelector('#result').textContent='FAIL: '+error.stack);
+</script></body></html>
